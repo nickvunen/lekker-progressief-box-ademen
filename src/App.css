@@ -1,0 +1,171 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Settings */
+.settings {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings label {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.rounds-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rounds-selector button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: 1.2rem;
+  font-family: 'Mulish', system-ui, sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.rounds-selector button:hover {
+  background: var(--accent-glow);
+}
+
+.rounds-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  min-width: 2ch;
+  text-align: center;
+}
+
+/* Sound toggle */
+.sound-toggle {
+  font-family: 'Mulish', system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--bg-light);
+  border-radius: 50px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sound-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.sound-toggle.sound-on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Timer display */
+.timer-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.phase-label {
+  font-size: 1.8rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  min-height: 2.2rem;
+  transition: opacity 0.3s ease;
+}
+
+.countdown {
+  font-size: 6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 16px;
+}
+
+.btn {
+  font-family: 'Mulish', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 14px 40px;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-start {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-start:hover {
+  background: #92c9b5;
+}
+
+.btn-stop {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.btn-stop:hover {
+  background: var(--accent-glow);
+}
+
+/* Fade transition */
+.phase-enter {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
