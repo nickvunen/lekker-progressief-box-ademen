@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useBreathingTimer } from './useBreathingTimer';
 import { useGong } from './useGong';
+import { useWakeLock } from './useWakeLock';
 import './App.css';
 
 const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
@@ -9,6 +10,7 @@ function App() {
   const [roundsPerIncrement, setRoundsPerIncrement] = useState(2);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const gong = useGong();
+  const wakeLock = useWakeLock();
 
   const handlePhaseChange = useCallback(() => {
     gong.play();
@@ -63,7 +65,13 @@ function App() {
           </button>
 
           <div className="controls">
-            <button className="btn btn-start" onClick={timer.start}>
+            <button
+              className="btn btn-start"
+              onClick={() => {
+                timer.start();
+                wakeLock.request();
+              }}
+            >
               Start
             </button>
           </div>
@@ -82,7 +90,13 @@ function App() {
           </div>
 
           <div className="controls">
-            <button className="btn btn-stop" onClick={timer.stop}>
+            <button
+              className="btn btn-stop"
+              onClick={() => {
+                timer.stop();
+                wakeLock.release();
+              }}
+            >
               Stop
             </button>
           </div>
