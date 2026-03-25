@@ -3,6 +3,8 @@ import { useBreathingTimer } from './useBreathingTimer';
 import { useGong } from './useGong';
 import './App.css';
 
+const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
+
 function App() {
   const [roundsPerIncrement, setRoundsPerIncrement] = useState(2);
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -23,6 +25,13 @@ function App() {
   return (
     <div className="app">
       <h1 className="title">Progressive Box Breathing</h1>
+
+      {!timer.isRunning && !isInstalled && (
+        <p className="install-hint">
+          Install as app: tap <strong>Share &rarr; Add to Home Screen</strong>{' '}
+          (iOS) or <strong>Menu &rarr; Install App</strong> (Android/Desktop)
+        </p>
+      )}
 
       {!timer.isRunning ? (
         <>
