@@ -68,6 +68,7 @@ function App() {
             <button
               className="btn btn-start"
               onClick={() => {
+                gong.warmUp();
                 timer.start();
                 wakeLock.request();
               }}

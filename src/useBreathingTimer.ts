@@ -20,31 +20,55 @@ interface TimerState {
   roundInSet: number;
 }
 
+interface InternalState {
+  phaseIndex: number;
+  secondsLeft: number;
+  currentDuration: number;
+  roundInSet: number;
+}
+
+const INITIAL_INTERNAL: InternalState = {
+  phaseIndex: 0,
+  secondsLeft: 3,
+  currentDuration: 3,
+  roundInSet: 1,
+};
+
+const INITIAL_STATE: TimerState = {
+  isRunning: false,
+  phase: 'breathe-in',
+  phaseLabel: 'Breathe In',
+  secondsLeft: 3,
+  currentDuration: 3,
+  roundInSet: 1,
+};
+
 export function useBreathingTimer(
   roundsPerIncrement: number,
   onPhaseChange?: () => void,
 ) {
-  const [state, setState] = useState<TimerState>({
-    isRunning: false,
-    phase: 'breathe-in',
-    phaseLabel: 'Breathe In',
-    secondsLeft: 3,
-    currentDuration: 3,
-    roundInSet: 1,
-  });
+  const [state, setState] = useState<TimerState>(INITIAL_STATE);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const stateRef = useRef({
-    phaseIndex: 0,
-    secondsLeft: 3,
-    currentDuration: 3,
-    roundInSet: 1,
-  });
+  const rafRef = useRef<number | null>(null);
+  const nextTickRef = useRef<number>(0);
+  const stateRef = useRef<InternalState>({ ...INITIAL_INTERNAL });
+  const roundsRef = useRef(roundsPerIncrement);
+  const onPhaseChangeRef = useRef(onPhaseChange);
+  const loopRef = useRef<FrameRequestCallback | null>(null);
 
-  const clearTimer = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+  // Keep refs in sync so the rAF loop always reads fresh values
+  useEffect(() => {
+    roundsRef.current = roundsPerIncrement;
+  }, [roundsPerIncrement]);
+
+  useEffect(() => {
+    onPhaseChangeRef.current = onPhaseChange;
+  }, [onPhaseChange]);
+
+  const cancelLoop = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     }
   }, []);
 
@@ -61,14 +85,14 @@ export function useBreathingTimer(
         s.roundInSet += 1;
 
         // Check if we need to increment duration
-        if (s.roundInSet > roundsPerIncrement) {
+        if (s.roundInSet > roundsRef.current) {
           s.currentDuration += 1;
           s.roundInSet = 1;
         }
       }
 
       s.secondsLeft = s.currentDuration;
-      onPhaseChange?.();
+      onPhaseChangeRef.current?.();
     }
 
     const phase = PHASES[s.phaseIndex];
@@ -80,50 +104,38 @@ export function useBreathingTimer(
       currentDuration: s.currentDuration,
       roundInSet: s.roundInSet,
     });
-  }, [roundsPerIncrement, onPhaseChange]);
-
-  const start = useCallback(() => {
-    stateRef.current = {
-      phaseIndex: 0,
-      secondsLeft: 3,
-      currentDuration: 3,
-      roundInSet: 1,
-    };
-
-    setState({
-      isRunning: true,
-      phase: 'breathe-in',
-      phaseLabel: 'Breathe In',
-      secondsLeft: 3,
-      currentDuration: 3,
-      roundInSet: 1,
-    });
-
-    clearTimer();
-    intervalRef.current = setInterval(tick, 1000);
-  }, [tick, clearTimer]);
-
-  const stop = useCallback(() => {
-    clearTimer();
-    setState({
-      isRunning: false,
-      phase: 'breathe-in',
-      phaseLabel: 'Breathe In',
-      secondsLeft: 3,
-      currentDuration: 3,
-      roundInSet: 1,
-    });
-    stateRef.current = {
-      phaseIndex: 0,
-      secondsLeft: 3,
-      currentDuration: 3,
-      roundInSet: 1,
-    };
-  }, [clearTimer]);
+  }, []);
 
   useEffect(() => {
-    return clearTimer;
-  }, [clearTimer]);
+    loopRef.current = (now: number) => {
+      // Process every elapsed second (catches up if tab was throttled)
+      while (nextTickRef.current <= now) {
+        tick();
+        nextTickRef.current += 1000;
+      }
+      rafRef.current = requestAnimationFrame(loopRef.current!);
+    };
+  }, [tick]);
+
+  const start = useCallback(() => {
+    stateRef.current = { ...INITIAL_INTERNAL };
+    setState({ ...INITIAL_STATE, isRunning: true });
+
+    cancelLoop();
+    // First tick fires 1 s from now
+    nextTickRef.current = performance.now() + 1000;
+    rafRef.current = requestAnimationFrame(loopRef.current!);
+  }, [cancelLoop]);
+
+  const stop = useCallback(() => {
+    cancelLoop();
+    setState(INITIAL_STATE);
+    stateRef.current = { ...INITIAL_INTERNAL };
+  }, [cancelLoop]);
+
+  useEffect(() => {
+    return cancelLoop;
+  }, [cancelLoop]);
 
   return { ...state, start, stop };
 }
