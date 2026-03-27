@@ -37,9 +37,15 @@ const INITIAL_STATE: TimerState = {
   remainingTime: '',
 };
 
-function formatHalfSeconds(ms: number): string {
-  const halfSecs = Math.max(0.5, Math.ceil(ms / 500) * 0.5);
-  return halfSecs % 1 === 0 ? `${halfSecs}` : halfSecs.toFixed(1);
+// Show ".5" only during the initial half-second of a phase that starts with one;
+// after that count down in whole seconds.
+function formatDisplay(remainingMs: number, phaseDurationMs: number): string {
+  const fullSeconds = Math.floor(phaseDurationMs / 1000);
+  const phaseStartsWithHalf = phaseDurationMs % 1000 === 500;
+  if (phaseStartsWithHalf && remainingMs > fullSeconds * 1000) {
+    return `${fullSeconds}.5`;
+  }
+  return `${Math.ceil(remainingMs / 1000)}`;
 }
 
 function buildPhaseList(settings: FlowSettings): ActivePhase[] {
@@ -147,7 +153,7 @@ export function useFlowBreathingTimer(
           isRunning: true,
           phase: nextPhase.phase,
           phaseLabel: PHASE_LABELS[nextPhase.phase],
-          displayTime: formatHalfSeconds(nextPhase.duration),
+          displayTime: formatDisplay(nextPhase.duration, nextPhase.duration),
           remainingTime: formatRemaining(totalRemaining),
         });
       } else {
@@ -160,7 +166,7 @@ export function useFlowBreathingTimer(
           isRunning: true,
           phase: currentPhase.phase,
           phaseLabel: PHASE_LABELS[currentPhase.phase],
-          displayTime: formatHalfSeconds(remainingInPhase),
+          displayTime: formatDisplay(remainingInPhase, currentPhase.duration),
           remainingTime: formatRemaining(totalRemaining),
         });
       }
@@ -189,7 +195,7 @@ export function useFlowBreathingTimer(
       isRunning: true,
       phase: firstPhase.phase,
       phaseLabel: PHASE_LABELS[firstPhase.phase],
-      displayTime: formatHalfSeconds(firstPhase.duration),
+      displayTime: formatDisplay(firstPhase.duration, firstPhase.duration),
       remainingTime: formatRemaining(s.totalMinutes * 60 * 1000),
     });
 
