@@ -3,14 +3,31 @@ import { useBreathingTimer } from './useBreathingTimer';
 import type { Phase } from './useBreathingTimer';
 import { useFlowBreathingTimer } from './useFlowBreathingTimer';
 import type { FlowSettings } from './useFlowBreathingTimer';
+import { useCO2Timer } from './useCO2Timer';
+import type { CO2Phase } from './useCO2Timer';
 import { useGong } from './useGong';
 import { useWakeLock } from './useWakeLock';
 import { usePersistedState } from './usePersistedState';
 import './App.css';
 
-type Tab = 'progressive-box' | 'flow-breathing';
+type Tab = 'progressive-box' | 'flow-breathing' | 'co2-table';
 
 const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
+
+const TITLES: Record<Tab, string> = {
+  'progressive-box': 'Progressive Box Breathing',
+  'flow-breathing': 'Flow Breathing',
+  'co2-table': 'CO₂ Table',
+};
+
+const DESCRIPTIONS: Record<Tab, string> = {
+  'progressive-box':
+    'Breathe in, hold, breathe out, hold — all equal length. After a set number of rounds, the duration increases by one second.',
+  'flow-breathing':
+    'A free-form breathing cycle with custom durations for each phase. Set your rhythm and total session time.',
+  'co2-table':
+    'Diver training: alternate between rest and breath-holds. Rest periods shorten each round to build CO₂ tolerance.',
+};
 
 function App() {
   const [activeTab, setActiveTab] = usePersistedState<Tab>(
@@ -36,6 +53,9 @@ function App() {
     5,
   );
 
+  // CO2 settings
+  const [co2Hold, setCo2Hold] = usePersistedState('co2.holdSeconds', 20);
+
   const flowSettings: FlowSettings = {
     breatheIn,
     holdIn,
@@ -58,7 +78,18 @@ function App() {
     [gong],
   );
 
-  const handleFlowComplete = useCallback(() => {
+  const handleCO2PhaseChange = useCallback(
+    (phase: CO2Phase) => {
+      if (phase === 'rest') {
+        gong.playIn();
+      } else {
+        gong.playOut();
+      }
+    },
+    [gong],
+  );
+
+  const handleComplete = useCallback(() => {
     gong.playFinish();
   }, [gong]);
 
@@ -66,10 +97,12 @@ function App() {
   const flowTimer = useFlowBreathingTimer(
     flowSettings,
     handlePhaseChange,
-    handleFlowComplete,
+    handleComplete,
   );
+  const co2Timer = useCO2Timer(co2Hold, handleCO2PhaseChange, handleComplete);
 
-  const isRunning = boxTimer.isRunning || flowTimer.isRunning;
+  const isRunning =
+    boxTimer.isRunning || flowTimer.isRunning || co2Timer.isRunning;
 
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -82,12 +115,13 @@ function App() {
 
   const handleStart = () => {
     gong.warmUp();
-    // Small delay so warmUp unlocks audio before the first gong
     setTimeout(() => gong.playIn(), 50);
     if (activeTab === 'progressive-box') {
       boxTimer.start();
-    } else {
+    } else if (activeTab === 'flow-breathing') {
       flowTimer.start();
+    } else {
+      co2Timer.start();
     }
     wakeLock.request();
   };
@@ -95,6 +129,7 @@ function App() {
   const handleStop = () => {
     boxTimer.stop();
     flowTimer.stop();
+    co2Timer.stop();
     wakeLock.release();
   };
 
@@ -114,26 +149,22 @@ function App() {
           >
             Flow Breathing
           </button>
+          <button
+            className={`tab ${activeTab === 'co2-table' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('co2-table')}
+          >
+            CO₂ Table
+          </button>
         </div>
       )}
 
-      <h1 className="title">
-        {activeTab === 'progressive-box'
-          ? 'Progressive Box Breathing'
-          : 'Flow Breathing'}
-      </h1>
+      <h1 className="title">{TITLES[activeTab]}</h1>
 
-      {!isRunning && (
-        <p className="description">
-          {activeTab === 'progressive-box'
-            ? 'Breathe in, hold, breathe out, hold — all equal length. After a set number of rounds, the duration increases by one second.'
-            : 'A free-form breathing cycle with custom durations for each phase. Set your rhythm and total session time.'}
-        </p>
-      )}
+      {!isRunning && <p className="description">{DESCRIPTIONS[activeTab]}</p>}
 
       {!isRunning ? (
         <>
-          {activeTab === 'progressive-box' ? (
+          {activeTab === 'progressive-box' && (
             <div className="settings">
               <label>Rounds before increment</label>
               <div className="rounds-selector">
@@ -154,7 +185,9 @@ function App() {
                 </button>
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'flow-breathing' && (
             <div className="settings">
               <FlowSetting
                 label="In breath"
@@ -194,6 +227,37 @@ function App() {
             </div>
           )}
 
+          {activeTab === 'co2-table' && (
+            <div className="settings">
+              <div className="flow-setting">
+                <label>Hold duration</label>
+                <div className="rounds-selector">
+                  <button
+                    onClick={() => setCo2Hold((v) => Math.max(5, v - 1))}
+                    aria-label="Decrease hold"
+                  >
+                    &minus;
+                  </button>
+                  <span className="rounds-value">{co2Hold}s</span>
+                  <button
+                    onClick={() => setCo2Hold((v) => v + 1)}
+                    aria-label="Increase hold"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <p className="co2-schedule">
+                Rest: 2:30 &rarr; 2:15 &rarr; 2:00 &rarr; 1:45 &rarr; 1:30
+                &rarr; 1:15 &rarr; 1:00 &middot; 7 rounds
+              </p>
+              <div className="disclaimer">
+                ⚠️ Never practice breath-holds alone or in/near water. Hypoxic
+                blackout can occur without warning.
+              </div>
+            </div>
+          )}
+
           <div className="actions">
             <button
               className={`sound-toggle ${soundEnabled ? 'sound-on' : ''}`}
@@ -220,7 +284,7 @@ function App() {
         </>
       ) : (
         <>
-          {activeTab === 'progressive-box' ? (
+          {activeTab === 'progressive-box' && (
             <div className="timer-display">
               <div className="phase-label phase-enter" key={boxTimer.phase}>
                 {boxTimer.phaseLabel}
@@ -236,7 +300,9 @@ function App() {
                 /{roundsPerIncrement}
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'flow-breathing' && (
             <div className="timer-display">
               <div className="phase-label phase-enter" key={flowTimer.phase}>
                 {flowTimer.phaseLabel}
@@ -250,6 +316,24 @@ function App() {
                 </div>
               </div>
               <div className="info">{flowTimer.remainingTime}</div>
+            </div>
+          )}
+
+          {activeTab === 'co2-table' && (
+            <div className="timer-display">
+              <div
+                className="phase-label phase-enter"
+                key={co2Timer.phase + co2Timer.roundInfo}
+              >
+                {co2Timer.phaseLabel}
+              </div>
+              <div
+                className="countdown countdown-tick"
+                key={co2Timer.countdown}
+              >
+                {co2Timer.countdown}
+              </div>
+              <div className="info">{co2Timer.roundInfo}</div>
             </div>
           )}
 

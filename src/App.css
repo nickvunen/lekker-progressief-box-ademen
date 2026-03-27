@@ -87,6 +87,28 @@
   font-size: 0.8rem;
 }
 
+/* CO2 schedule summary */
+.co2-schedule {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* Disclaimer */
+.disclaimer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+  border: 1px solid var(--bg-light);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 300px;
+  opacity: 0.7;
+}
+
 /* Install hint */
 .install-hint {
   font-size: 0.75rem;
