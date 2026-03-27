@@ -1,6 +1,8 @@
 import { useRef, useCallback } from 'react';
 
-const audio = new Audio('/gong.mp3');
+const audioIn = new Audio('/gong_start.wav');
+const audioOut = new Audio('/gong_end.wav');
+const audioFinish = new Audio('/gong_finish.mp3');
 
 export function useGong() {
   const enabledRef = useRef(false);
@@ -11,28 +13,37 @@ export function useGong() {
 
   /** Call from a user-gesture handler to unlock audio on mobile browsers. */
   const warmUp = useCallback(() => {
-    audio.muted = true;
-    audio
-      .play()
-      .then(() => {
-        audio.pause();
-        audio.muted = false;
-        audio.currentTime = 0;
-      })
-      .catch(() => {
-        audio.muted = false;
-      });
+    for (const a of [audioIn, audioOut, audioFinish]) {
+      a.muted = true;
+      a.play()
+        .then(() => {
+          a.pause();
+          a.muted = false;
+          a.currentTime = 0;
+        })
+        .catch(() => {
+          a.muted = false;
+        });
+    }
   }, []);
 
-  const play = useCallback(() => {
+  const playIn = useCallback(() => {
     if (!enabledRef.current) return;
-
-    // Reset and play — allows overlapping with quick restarts
-    audio.currentTime = 0;
-    audio.play().catch(() => {
-      // Autoplay blocked — nothing we can do
-    });
+    const a = audioIn.cloneNode() as HTMLAudioElement;
+    a.play().catch(() => {});
   }, []);
 
-  return { play, warmUp, setEnabled, enabledRef };
+  const playOut = useCallback(() => {
+    if (!enabledRef.current) return;
+    const a = audioOut.cloneNode() as HTMLAudioElement;
+    a.play().catch(() => {});
+  }, []);
+
+  const playFinish = useCallback(() => {
+    if (!enabledRef.current) return;
+    const a = audioFinish.cloneNode() as HTMLAudioElement;
+    a.play().catch(() => {});
+  }, []);
+
+  return { playIn, playOut, playFinish, warmUp, setEnabled, enabledRef };
 }
