@@ -233,6 +233,13 @@ function App() {
                 <label>Hold duration</label>
                 <div className="rounds-selector">
                   <button
+                    className="btn-jump"
+                    onClick={() => setCo2Hold((v) => Math.max(5, v - 10))}
+                    aria-label="Decrease hold by 10"
+                  >
+                    &minus;10
+                  </button>
+                  <button
                     onClick={() => setCo2Hold((v) => Math.max(5, v - 1))}
                     aria-label="Decrease hold"
                   >
@@ -244,6 +251,13 @@ function App() {
                     aria-label="Increase hold"
                   >
                     +
+                  </button>
+                  <button
+                    className="btn-jump"
+                    onClick={() => setCo2Hold((v) => v + 10)}
+                    aria-label="Increase hold by 10"
+                  >
+                    +10
                   </button>
                 </div>
               </div>
