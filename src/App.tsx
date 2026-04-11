@@ -6,6 +6,7 @@ import type { FlowSettings } from './useFlowBreathingTimer';
 import { useCO2Timer } from './useCO2Timer';
 import type { CO2Phase } from './useCO2Timer';
 import { useGong } from './useGong';
+import type { SoundKey } from './useGong';
 import { useWakeLock } from './useWakeLock';
 import { usePersistedState } from './usePersistedState';
 import './App.css';
@@ -158,7 +159,13 @@ function App() {
   };
 
   const handleStart = async () => {
-    await gong.warmUp();
+    const firstKey: SoundKey =
+      activeTab === 'progressive-box'
+        ? 'gong-in'
+        : activeTab === 'flow-breathing'
+          ? 'breathe-in'
+          : 'ending';
+    await gong.warmUp(firstKey);
     if (activeTab === 'progressive-box') {
       boxTimer.start();
       gong.playIn();

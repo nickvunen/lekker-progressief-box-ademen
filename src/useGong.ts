@@ -6,7 +6,7 @@ const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-type SoundKey =
+export type SoundKey =
   | 'gong-in'
   | 'gong-out'
   | 'gong-finish'
@@ -38,28 +38,36 @@ const htmlAudio = isIOS
 
 let htmlCurrentStoppable: HTMLAudioElement | null = null;
 
-async function htmlUnlock(): Promise<void> {
+// Per-key unlock promises — populated synchronously by htmlStartUnlocks()
+const unlockDone = new Map<SoundKey, Promise<void>>();
+
+// Start all unlock plays synchronously so they all fall within the iOS user
+// gesture activation chain. Must NOT have any await before the play() calls.
+function htmlStartUnlocks() {
   if (!htmlAudio) return;
-  await Promise.all(
-    Object.values(htmlAudio).map(
-      (audio) =>
-        new Promise<void>((resolve) => {
-          audio.muted = true;
-          audio
-            .play()
-            .then(() => {
-              audio.pause();
-              audio.muted = false;
-              audio.currentTime = 0;
-              resolve();
-            })
-            .catch(() => {
-              audio.muted = false;
-              resolve();
-            });
-        }),
-    ),
-  );
+  for (const [key, audio] of Object.entries(htmlAudio) as [
+    SoundKey,
+    HTMLAudioElement,
+  ][]) {
+    unlockDone.set(
+      key,
+      new Promise<void>((resolve) => {
+        audio.muted = true;
+        audio
+          .play()
+          .then(() => {
+            audio.pause();
+            audio.muted = false;
+            audio.currentTime = 0;
+            resolve();
+          })
+          .catch(() => {
+            audio.muted = false;
+            resolve();
+          });
+      }),
+    );
+  }
 }
 
 function htmlPlayFree(key: SoundKey) {
@@ -206,12 +214,15 @@ export function useGong() {
     enabledRef.current = enabled;
   }, []);
 
-  const warmUp = useCallback(async () => {
+  const warmUp = useCallback(async (priorityKey?: SoundKey) => {
     if (isIOS) {
-      // Await htmlUnlock so all elements are fully unpaused and unmuted before
-      // the first sound is played. The .play() calls still happen synchronously
-      // within the user gesture chain — we just wait for their .then() to settle.
-      await htmlUnlock();
+      // All play() calls happen synchronously here (gesture chain intact).
+      // We then await only the specific element we're about to play first —
+      // the other 6 finish unlocking in the background, eliminating the delay.
+      htmlStartUnlocks();
+      await (priorityKey
+        ? unlockDone.get(priorityKey)
+        : Promise.all(unlockDone.values()));
       return;
     }
     try {
