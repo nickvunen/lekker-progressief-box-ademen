@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useBreathingTimer } from './useBreathingTimer';
 import type { Phase } from './useBreathingTimer';
 import { useFlowBreathingTimer } from './useFlowBreathingTimer';
@@ -10,7 +10,11 @@ import { useWakeLock } from './useWakeLock';
 import { usePersistedState } from './usePersistedState';
 import './App.css';
 
-type Tab = 'progressive-box' | 'flow-breathing' | 'co2-table';
+type Tab =
+  | 'progressive-box'
+  | 'flow-breathing'
+  | 'co2-table'
+  | 'breath-journey';
 
 const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
 
@@ -18,6 +22,7 @@ const TITLES: Record<Tab, string> = {
   'progressive-box': 'Progressive Box Breathing',
   'flow-breathing': 'Flow Breathing',
   'co2-table': 'CO₂ Table',
+  'breath-journey': 'Breath Journey',
 };
 
 const DESCRIPTIONS: Record<Tab, string> = {
@@ -27,7 +32,15 @@ const DESCRIPTIONS: Record<Tab, string> = {
     'A free-form breathing cycle with custom durations for each phase. Set your rhythm and total session time.',
   'co2-table':
     'Diver training: alternate between rest and breath-holds. Rest periods shorten each round to build CO₂ tolerance.',
+  'breath-journey':
+    'Take a short breath journey to deeply relax and connect with yourself.',
 };
+
+function formatTime(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 function App() {
   const [activeTab, setActiveTab] = usePersistedState<Tab>(
@@ -55,6 +68,12 @@ function App() {
 
   // CO2 settings
   const [co2Hold, setCo2Hold] = usePersistedState('co2.holdSeconds', 20);
+
+  // Breath Journey player state
+  const [journeyPlaying, setJourneyPlaying] = useState(false);
+  const [journeyCurrentTime, setJourneyCurrentTime] = useState(0);
+  const [journeyDuration, setJourneyDuration] = useState(0);
+  const journeyAudioRef = useRef<HTMLAudioElement>(null);
 
   const flowSettings: FlowSettings = {
     breatheIn,
@@ -113,6 +132,15 @@ function App() {
   // Sync gong enabled state on mount
   gong.setEnabled(soundEnabled);
 
+  const handleTabChange = (tab: Tab) => {
+    if (activeTab === 'breath-journey' && journeyAudioRef.current) {
+      journeyAudioRef.current.pause();
+      journeyAudioRef.current.currentTime = 0;
+      setJourneyCurrentTime(0);
+    }
+    setActiveTab(tab);
+  };
+
   const handleStart = () => {
     gong.warmUp();
     setTimeout(() => gong.playIn(), 50);
@@ -133,36 +161,116 @@ function App() {
     wakeLock.release();
   };
 
+  const handleJourneyToggle = () => {
+    const audio = journeyAudioRef.current;
+    if (!audio) return;
+    if (journeyPlaying) {
+      audio.pause();
+    } else {
+      audio.play();
+      wakeLock.request();
+    }
+  };
+
   return (
     <div className="app">
       {!isRunning && (
         <div className="tabs">
           <button
             className={`tab ${activeTab === 'progressive-box' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('progressive-box')}
+            onClick={() => handleTabChange('progressive-box')}
           >
             Progressive Box
           </button>
           <button
             className={`tab ${activeTab === 'flow-breathing' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('flow-breathing')}
+            onClick={() => handleTabChange('flow-breathing')}
           >
             Flow Breathing
           </button>
           <button
             className={`tab ${activeTab === 'co2-table' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('co2-table')}
+            onClick={() => handleTabChange('co2-table')}
           >
             CO₂ Table
+          </button>
+          <button
+            className={`tab ${activeTab === 'breath-journey' ? 'tab-active' : ''}`}
+            onClick={() => handleTabChange('breath-journey')}
+          >
+            Breath Journey
           </button>
         </div>
       )}
 
       <h1 className="title">{TITLES[activeTab]}</h1>
 
-      {!isRunning && <p className="description">{DESCRIPTIONS[activeTab]}</p>}
+      {(!isRunning || activeTab === 'breath-journey') && (
+        <p className="description">{DESCRIPTIONS[activeTab]}</p>
+      )}
 
-      {!isRunning ? (
+      {activeTab === 'breath-journey' ? (
+        <div className="journey-player">
+          <audio
+            ref={journeyAudioRef}
+            src="/breath-journey.mp3"
+            onPlay={() => setJourneyPlaying(true)}
+            onPause={() => {
+              setJourneyPlaying(false);
+              wakeLock.release();
+            }}
+            onEnded={() => {
+              setJourneyPlaying(false);
+              setJourneyCurrentTime(0);
+              if (journeyAudioRef.current)
+                journeyAudioRef.current.currentTime = 0;
+              wakeLock.release();
+            }}
+            onTimeUpdate={(e) =>
+              setJourneyCurrentTime((e.target as HTMLAudioElement).currentTime)
+            }
+            onLoadedMetadata={(e) =>
+              setJourneyDuration((e.target as HTMLAudioElement).duration)
+            }
+          />
+          <button
+            className="journey-play-btn"
+            onClick={handleJourneyToggle}
+            aria-label={journeyPlaying ? 'Pause journey' : 'Play journey'}
+          >
+            {journeyPlaying ? '⏸' : '▶'}
+          </button>
+          <div className="journey-progress-container">
+            <input
+              type="range"
+              className="journey-progress"
+              min={0}
+              max={journeyDuration || 100}
+              step={0.1}
+              value={journeyCurrentTime}
+              style={
+                {
+                  '--progress': journeyDuration
+                    ? journeyCurrentTime / journeyDuration
+                    : 0,
+                } as React.CSSProperties
+              }
+              onChange={(e) => {
+                const t = Number(e.target.value);
+                if (journeyAudioRef.current)
+                  journeyAudioRef.current.currentTime = t;
+                setJourneyCurrentTime(t);
+              }}
+            />
+            <div className="journey-time">
+              <span>{formatTime(journeyCurrentTime)}</span>
+              <span>
+                {journeyDuration ? formatTime(journeyDuration) : '--:--'}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : !isRunning ? (
         <>
           {activeTab === 'progressive-box' && (
             <div className="settings">
