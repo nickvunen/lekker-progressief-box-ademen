@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 
-// Web Audio API context — once resumed via a user gesture, stays unlocked indefinitely.
+// Web Audio API context — starts suspended on iOS until resumed by a user gesture.
 const ctx = new (
   window.AudioContext ??
   (
@@ -21,32 +21,54 @@ type BufferKey =
 
 const buffers = new Map<BufferKey, AudioBuffer>();
 
-async function loadBuffer(key: BufferKey, src: string) {
-  const res = await fetch(src);
-  const raw = await res.arrayBuffer();
-  const buffer = await ctx.decodeAudioData(raw);
-  buffers.set(key, buffer);
+// Phase 1: fetch raw bytes eagerly — no AudioContext needed, always works.
+const rawFetches = new Map<BufferKey, Promise<ArrayBuffer>>();
+
+function prefetch(key: BufferKey, src: string) {
+  rawFetches.set(
+    key,
+    fetch(src)
+      .then((r) => r.arrayBuffer())
+      .catch(() => new ArrayBuffer(0)),
+  );
 }
 
-// Gong sounds (Progressive Box)
-loadBuffer('gong-in', '/gong_start.wav');
-loadBuffer('gong-out', '/gong_end.wav');
-loadBuffer('gong-finish', '/gong_finish.mp3');
+prefetch('gong-in', '/gong_start.wav');
+prefetch('gong-out', '/gong_end.wav');
+prefetch('gong-finish', '/gong_finish.mp3');
+prefetch('breathe-in', '/breathing-in.mp3');
+prefetch('hold', '/hold.mp3');
+prefetch('breathe-out', '/breathing-out.mp3');
+prefetch('ending', '/ending.mp3');
 
-// New sounds (Flow + CO₂)
-loadBuffer('breathe-in', '/breathing-in.mp3');
-loadBuffer('hold', '/hold.mp3');
-loadBuffer('breathe-out', '/breathing-out.mp3');
-loadBuffer('ending', '/ending.mp3');
+// Phase 2: decode — runs after ctx.resume() so iOS is happy.
+// Sequential to avoid overwhelming mobile audio decoders.
+let decoding: Promise<void> | null = null;
 
-// Re-resume if iOS suspends the context when the app briefly goes to background
+async function decodeAll(): Promise<void> {
+  if (ctx.state !== 'running') await ctx.resume();
+  for (const [key, rawPromise] of rawFetches) {
+    if (buffers.has(key)) continue;
+    try {
+      const raw = await rawPromise;
+      if (raw.byteLength === 0) continue;
+      const buffer = await ctx.decodeAudioData(raw);
+      buffers.set(key, buffer);
+    } catch {
+      // skip — this sound just won't play
+    }
+  }
+}
+
+// Re-resume and re-decode if iOS suspends the context in the background.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && ctx.state === 'suspended') {
-    ctx.resume();
+    decoding = null;
+    decoding = decodeAll();
   }
 });
 
-// Tracks the currently playing stoppable source (Flow/CO₂ sounds only)
+// Tracks the currently playing stoppable source (Flow/CO₂ sounds only).
 let currentSource: AudioBufferSourceNode | null = null;
 
 function stopCurrent() {
@@ -54,13 +76,13 @@ function stopCurrent() {
     try {
       currentSource.stop();
     } catch {
-      // source may have already ended
+      // already ended
     }
     currentSource = null;
   }
 }
 
-/** Play a gong sound freely — no stopping, no overlap tracking (short sounds, ~1.7s). */
+/** Play a gong sound freely — no stopping, no overlap tracking (~1.7s gongs). */
 function playFree(key: BufferKey) {
   const buffer = buffers.get(key);
   if (!buffer) return;
@@ -70,7 +92,7 @@ function playFree(key: BufferKey) {
   source.start(0);
 }
 
-/** Play a sound and stop whatever was playing before (for 16s Flow/CO₂ sounds). */
+/** Stop whatever is playing, then play a new sound (for 16s Flow/CO₂ sounds). */
 function playStoppable(key: BufferKey) {
   stopCurrent();
   const buffer = buffers.get(key);
@@ -92,11 +114,14 @@ export function useGong() {
     enabledRef.current = enabled;
   }, []);
 
-  /** Call from a user-gesture handler to unlock audio on iOS. */
+  /**
+   * Call from a user-gesture handler to unlock audio on iOS.
+   * Resumes the AudioContext synchronously (gesture requirement),
+   * then decodes all buffers in the background.
+   */
   const warmUp = useCallback(() => {
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!decoding) decoding = decodeAll();
   }, []);
 
   // Progressive Box sounds (free-playing gong)

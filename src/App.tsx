@@ -159,7 +159,6 @@ function App() {
 
   const handleStart = () => {
     gong.warmUp();
-    setTimeout(() => gong.playIn(), 50);
     if (activeTab === 'progressive-box') {
       boxTimer.start();
     } else if (activeTab === 'flow-breathing') {
