@@ -61,6 +61,16 @@ async function decodeAll(): Promise<void> {
   );
 }
 
+// Call ctx.resume() at the earliest possible moment — touchstart fires before
+// click, so by the time React's onClick chain runs the context is already
+// resuming or running. This is the key unlock for iOS WebKit, which expires
+// the user activation token quickly through async chains.
+function earlyUnlock() {
+  if (ctx.state === 'suspended') ctx.resume();
+}
+document.addEventListener('touchstart', earlyUnlock, { passive: true });
+document.addEventListener('mousedown', earlyUnlock);
+
 // Re-resume if iOS suspends the context when the app goes to background.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && ctx.state === 'suspended') {
