@@ -47,17 +47,20 @@ let decoding: Promise<void> | null = null;
 
 async function decodeAll(): Promise<void> {
   if (ctx.state !== 'running') await ctx.resume();
-  for (const [key, rawPromise] of rawFetches) {
-    if (buffers.has(key)) continue;
-    try {
-      const raw = await rawPromise;
-      if (raw.byteLength === 0) continue;
-      const buffer = await ctx.decodeAudioData(raw);
-      buffers.set(key, buffer);
-    } catch {
-      // skip — this sound just won't play
-    }
-  }
+  await Promise.all(
+    [...rawFetches.entries()]
+      .filter(([key]) => !buffers.has(key))
+      .map(async ([key, rawPromise]) => {
+        try {
+          const raw = await rawPromise;
+          if (raw.byteLength === 0) return;
+          const buffer = await ctx.decodeAudioData(raw);
+          buffers.set(key, buffer);
+        } catch {
+          // skip — this sound just won't play
+        }
+      }),
+  );
 }
 
 // Re-resume and re-decode if iOS suspends the context in the background.
@@ -119,9 +122,10 @@ export function useGong() {
    * Resumes the AudioContext synchronously (gesture requirement),
    * then decodes all buffers in the background.
    */
-  const warmUp = useCallback(() => {
-    if (ctx.state === 'suspended') ctx.resume();
+  const warmUp = useCallback(async () => {
+    if (ctx.state === 'suspended') ctx.resume(); // sync — must be in user gesture
     if (!decoding) decoding = decodeAll();
+    await decoding;
   }, []);
 
   // Progressive Box sounds (free-playing gong)
