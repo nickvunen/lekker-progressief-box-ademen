@@ -21,7 +21,7 @@ type BufferKey =
 
 const buffers = new Map<BufferKey, AudioBuffer>();
 
-// Phase 1: fetch raw bytes eagerly — no AudioContext needed, always works.
+// Fetch raw bytes eagerly — no AudioContext needed, always works.
 const rawFetches = new Map<BufferKey, Promise<ArrayBuffer>>();
 
 function prefetch(key: BufferKey, src: string) {
@@ -41,12 +41,10 @@ prefetch('hold', '/hold.mp3');
 prefetch('breathe-out', '/breathing-out.mp3');
 prefetch('ending', '/ending.mp3');
 
-// Phase 2: decode — runs after ctx.resume() so iOS is happy.
-// Sequential to avoid overwhelming mobile audio decoders.
+// Decode all fetched buffers. Context must be running before calling this.
 let decoding: Promise<void> | null = null;
 
 async function decodeAll(): Promise<void> {
-  if (ctx.state !== 'running') await ctx.resume();
   await Promise.all(
     [...rawFetches.entries()]
       .filter(([key]) => !buffers.has(key))
@@ -63,11 +61,10 @@ async function decodeAll(): Promise<void> {
   );
 }
 
-// Re-resume and re-decode if iOS suspends the context in the background.
+// Re-resume if iOS suspends the context when the app goes to background.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && ctx.state === 'suspended') {
-    decoding = null;
-    decoding = decodeAll();
+    ctx.resume();
   }
 });
 
@@ -118,14 +115,34 @@ export function useGong() {
   }, []);
 
   /**
-   * Call from a user-gesture handler to unlock audio on iOS.
-   * Resumes the AudioContext synchronously (gesture requirement),
-   * then decodes all buffers in the background.
+   * Golden-standard iOS unlock sequence. Call from a button click handler.
+   *
+   * 1. await ctx.resume()        — waits until context is truly running
+   * 2. Play a 1-frame silent buffer — mandatory extra unlock for some iOS versions
+   * 3. Decode all audio files    — safe now that context is running
+   *
+   * Wrapped in try/catch so a failure never blocks the timer from starting.
    */
   const warmUp = useCallback(async () => {
-    if (ctx.state === 'suspended') ctx.resume(); // sync — must be in user gesture
-    if (!decoding) decoding = decodeAll();
-    await decoding;
+    try {
+      // Step 1: resume (must be called synchronously within the user gesture —
+      // calling an async function from a click handler satisfies this on all browsers)
+      if (ctx.state !== 'running') await ctx.resume();
+
+      // Step 2: play a 1-frame silent buffer — the iOS "unlock" trick
+      const silentBuf = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const unlock = ctx.createBufferSource();
+      unlock.buffer = silentBuf;
+      unlock.connect(ctx.destination);
+      unlock.start(0);
+
+      // Step 3: decode all audio now that context is confirmed running
+      if (!decoding) decoding = decodeAll();
+      await decoding;
+    } catch {
+      // Audio failed — timer will still start, just silently
+      decoding = null; // reset so next attempt can retry
+    }
   }, []);
 
   // Progressive Box sounds (free-playing gong)
