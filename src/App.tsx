@@ -180,25 +180,25 @@ function App() {
             className={`tab ${activeTab === 'progressive-box' ? 'tab-active' : ''}`}
             onClick={() => handleTabChange('progressive-box')}
           >
-            Progressive Box
+            Box
           </button>
           <button
             className={`tab ${activeTab === 'flow-breathing' ? 'tab-active' : ''}`}
             onClick={() => handleTabChange('flow-breathing')}
           >
-            Flow Breathing
+            Flow
           </button>
           <button
             className={`tab ${activeTab === 'co2-table' ? 'tab-active' : ''}`}
             onClick={() => handleTabChange('co2-table')}
           >
-            CO₂ Table
+            CO₂
           </button>
           <button
             className={`tab ${activeTab === 'breath-journey' ? 'tab-active' : ''}`}
             onClick={() => handleTabChange('breath-journey')}
           >
-            Breath Journey
+            Journey
           </button>
         </div>
       )}
