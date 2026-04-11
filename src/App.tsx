@@ -416,7 +416,11 @@ function App() {
             </button>
 
             <div className="controls">
-              <button className="btn btn-start" onClick={handleStart}>
+              <button
+                className="btn btn-start"
+                onPointerDown={gong.preWarm}
+                onClick={handleStart}
+              >
                 Start
               </button>
             </div>

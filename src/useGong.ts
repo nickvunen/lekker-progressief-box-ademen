@@ -43,8 +43,9 @@ const unlockDone = new Map<SoundKey, Promise<void>>();
 
 // Start all unlock plays synchronously so they all fall within the iOS user
 // gesture activation chain. Must NOT have any await before the play() calls.
+// Guard: once started, don't start again — elements stay unlocked.
 function htmlStartUnlocks() {
-  if (!htmlAudio) return;
+  if (!htmlAudio || unlockDone.size > 0) return;
   for (const [key, audio] of Object.entries(htmlAudio) as [
     SoundKey,
     HTMLAudioElement,
@@ -288,6 +289,12 @@ export function useGong() {
     else stopCurrent();
   }, []);
 
+  // Call this on pointerdown/touchstart of the Start button so unlocks begin
+  // while the finger is still down. By the time click fires, they're done.
+  const preWarm = useCallback(() => {
+    if (isIOS) htmlStartUnlocks();
+  }, []);
+
   return {
     playIn,
     playOut,
@@ -298,6 +305,7 @@ export function useGong() {
     playEnding,
     stopCurrentSound,
     warmUp,
+    preWarm,
     setEnabled,
     enabledRef,
   };
