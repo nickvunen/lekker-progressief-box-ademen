@@ -1,8 +1,6 @@
 import { useRef, useCallback } from 'react';
 
 // Web Audio API context — once resumed via a user gesture, stays unlocked indefinitely.
-// This is the reliable solution for iOS Safari, which silently revokes HTMLAudioElement
-// playback permission after a while.
 const ctx = new (
   window.AudioContext ??
   (
@@ -12,7 +10,14 @@ const ctx = new (
   ).webkitAudioContext
 )();
 
-type BufferKey = 'in' | 'out' | 'finish';
+type BufferKey =
+  | 'gong-in'
+  | 'gong-out'
+  | 'gong-finish'
+  | 'breathe-in'
+  | 'hold'
+  | 'breathe-out'
+  | 'ending';
 
 const buffers = new Map<BufferKey, AudioBuffer>();
 
@@ -23,9 +28,16 @@ async function loadBuffer(key: BufferKey, src: string) {
   buffers.set(key, buffer);
 }
 
-loadBuffer('in', '/gong_start.wav');
-loadBuffer('out', '/gong_end.wav');
-loadBuffer('finish', '/gong_finish.mp3');
+// Gong sounds (Progressive Box)
+loadBuffer('gong-in', '/gong_start.wav');
+loadBuffer('gong-out', '/gong_end.wav');
+loadBuffer('gong-finish', '/gong_finish.mp3');
+
+// New sounds (Flow + CO₂)
+loadBuffer('breathe-in', '/breathing-in.mp3');
+loadBuffer('hold', '/hold.mp3');
+loadBuffer('breathe-out', '/breathing-out.mp3');
+loadBuffer('ending', '/ending.mp3');
 
 // Re-resume if iOS suspends the context when the app briefly goes to background
 document.addEventListener('visibilitychange', () => {
@@ -34,13 +46,43 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-function playBuffer(key: BufferKey) {
+// Tracks the currently playing stoppable source (Flow/CO₂ sounds only)
+let currentSource: AudioBufferSourceNode | null = null;
+
+function stopCurrent() {
+  if (currentSource) {
+    try {
+      currentSource.stop();
+    } catch {
+      // source may have already ended
+    }
+    currentSource = null;
+  }
+}
+
+/** Play a gong sound freely — no stopping, no overlap tracking (short sounds, ~1.7s). */
+function playFree(key: BufferKey) {
   const buffer = buffers.get(key);
   if (!buffer) return;
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.connect(ctx.destination);
   source.start(0);
+}
+
+/** Play a sound and stop whatever was playing before (for 16s Flow/CO₂ sounds). */
+function playStoppable(key: BufferKey) {
+  stopCurrent();
+  const buffer = buffers.get(key);
+  if (!buffer) return;
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.addEventListener('ended', () => {
+    if (currentSource === source) currentSource = null;
+  });
+  source.start(0);
+  currentSource = source;
 }
 
 export function useGong() {
@@ -57,20 +99,58 @@ export function useGong() {
     }
   }, []);
 
+  // Progressive Box sounds (free-playing gong)
   const playIn = useCallback(() => {
     if (!enabledRef.current) return;
-    playBuffer('in');
+    playFree('gong-in');
   }, []);
 
   const playOut = useCallback(() => {
     if (!enabledRef.current) return;
-    playBuffer('out');
+    playFree('gong-out');
   }, []);
 
   const playFinish = useCallback(() => {
     if (!enabledRef.current) return;
-    playBuffer('finish');
+    playFree('gong-finish');
   }, []);
 
-  return { playIn, playOut, playFinish, warmUp, setEnabled, enabledRef };
+  // Flow + CO₂ sounds (stoppable on phase change)
+  const playBreatheIn = useCallback(() => {
+    if (!enabledRef.current) return;
+    playStoppable('breathe-in');
+  }, []);
+
+  const playHold = useCallback(() => {
+    if (!enabledRef.current) return;
+    playStoppable('hold');
+  }, []);
+
+  const playBreatheOut = useCallback(() => {
+    if (!enabledRef.current) return;
+    playStoppable('breathe-out');
+  }, []);
+
+  const playEnding = useCallback(() => {
+    if (!enabledRef.current) return;
+    playStoppable('ending');
+  }, []);
+
+  const stopCurrentSound = useCallback(() => {
+    stopCurrent();
+  }, []);
+
+  return {
+    playIn,
+    playOut,
+    playFinish,
+    playBreatheIn,
+    playHold,
+    playBreatheOut,
+    playEnding,
+    stopCurrentSound,
+    warmUp,
+    setEnabled,
+    enabledRef,
+  };
 }

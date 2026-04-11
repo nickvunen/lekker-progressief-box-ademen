@@ -86,7 +86,8 @@ function App() {
   const gong = useGong();
   const wakeLock = useWakeLock();
 
-  const handlePhaseChange = useCallback(
+  // Progressive Box — old gong sounds, unchanged
+  const handleBoxPhaseChange = useCallback(
     (phase: Phase) => {
       if (phase === 'breathe-in' || phase === 'hold-in') {
         gong.playIn();
@@ -97,25 +98,40 @@ function App() {
     [gong],
   );
 
+  // Flow — new stoppable sounds
+  const handleFlowPhaseChange = useCallback(
+    (phase: Phase) => {
+      if (phase === 'breathe-in') {
+        gong.playBreatheIn();
+      } else if (phase === 'hold-in' || phase === 'hold-out') {
+        gong.playHold();
+      } else {
+        gong.playBreatheOut();
+      }
+    },
+    [gong],
+  );
+
+  // CO₂ — new stoppable sounds
   const handleCO2PhaseChange = useCallback(
     (phase: CO2Phase) => {
-      if (phase === 'rest') {
-        gong.playIn();
+      if (phase === 'hold') {
+        gong.playHold();
       } else {
-        gong.playOut();
+        gong.playEnding();
       }
     },
     [gong],
   );
 
   const handleComplete = useCallback(() => {
-    gong.playFinish();
+    gong.playEnding();
   }, [gong]);
 
-  const boxTimer = useBreathingTimer(roundsPerIncrement, handlePhaseChange);
+  const boxTimer = useBreathingTimer(roundsPerIncrement, handleBoxPhaseChange);
   const flowTimer = useFlowBreathingTimer(
     flowSettings,
-    handlePhaseChange,
+    handleFlowPhaseChange,
     handleComplete,
   );
   const co2Timer = useCO2Timer(co2Hold, handleCO2PhaseChange, handleComplete);
@@ -158,6 +174,7 @@ function App() {
     boxTimer.stop();
     flowTimer.stop();
     co2Timer.stop();
+    gong.stopCurrentSound();
     wakeLock.release();
   };
 
