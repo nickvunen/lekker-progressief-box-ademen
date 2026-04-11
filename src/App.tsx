@@ -161,10 +161,13 @@ function App() {
     await gong.warmUp();
     if (activeTab === 'progressive-box') {
       boxTimer.start();
+      gong.playIn();
     } else if (activeTab === 'flow-breathing') {
       flowTimer.start();
+      gong.playBreatheIn();
     } else {
       co2Timer.start();
+      gong.playEnding(); // CO₂ starts with the rest phase
     }
     wakeLock.request();
   };
