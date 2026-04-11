@@ -1,16 +1,12 @@
 import { useRef, useCallback } from 'react';
 
-// Web Audio API context — starts suspended on iOS until resumed by a user gesture.
-const ctx = new (
-  window.AudioContext ??
-  (
-    window as unknown as {
-      webkitAudioContext: typeof AudioContext;
-    }
-  ).webkitAudioContext
-)();
+// iOS WebKit detection — all browsers on iOS use WebKit regardless of name,
+// and all share the same Web Audio API activation token issues.
+const isIOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-type BufferKey =
+type SoundKey =
   | 'gong-in'
   | 'gong-out'
   | 'gong-finish'
@@ -19,12 +15,91 @@ type BufferKey =
   | 'breathe-out'
   | 'ending';
 
-const buffers = new Map<BufferKey, AudioBuffer>();
+const SRCS: Record<SoundKey, string> = {
+  'gong-in': '/gong_start.wav',
+  'gong-out': '/gong_end.wav',
+  'gong-finish': '/gong_finish.mp3',
+  'breathe-in': '/breathing-in.mp3',
+  hold: '/hold.mp3',
+  'breathe-out': '/breathing-out.mp3',
+  ending: '/ending.mp3',
+};
 
-// Fetch raw bytes eagerly — no AudioContext needed, always works.
-const rawFetches = new Map<BufferKey, Promise<ArrayBuffer>>();
+// ─── HTMLAudioElement path (iOS) ──────────────────────────────────────────────
+// HTML5 audio has 10+ years of reliable iOS support. We use it here because
+// Web Audio API activation tokens expire through async chains on iOS WebKit,
+// making ctx.resume() unreliable no matter how early it's called.
 
-function prefetch(key: BufferKey, src: string) {
+const htmlAudio = isIOS
+  ? (Object.fromEntries(
+      Object.entries(SRCS).map(([k, src]) => [k, new Audio(src)]),
+    ) as Record<SoundKey, HTMLAudioElement>)
+  : null;
+
+let htmlCurrentStoppable: HTMLAudioElement | null = null;
+
+function htmlUnlock() {
+  if (!htmlAudio) return;
+  for (const audio of Object.values(htmlAudio)) {
+    audio.muted = true;
+    audio
+      .play()
+      .then(() => {
+        audio.pause();
+        audio.muted = false;
+        audio.currentTime = 0;
+      })
+      .catch(() => {
+        audio.muted = false;
+      });
+  }
+}
+
+function htmlPlayFree(key: SoundKey) {
+  const audio = htmlAudio?.[key];
+  if (!audio) return;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
+
+function htmlPlayStoppable(key: SoundKey) {
+  if (htmlCurrentStoppable) {
+    htmlCurrentStoppable.pause();
+    htmlCurrentStoppable.currentTime = 0;
+  }
+  const audio = htmlAudio?.[key];
+  if (!audio) return;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+  htmlCurrentStoppable = audio;
+}
+
+function htmlStopCurrent() {
+  if (htmlCurrentStoppable) {
+    htmlCurrentStoppable.pause();
+    htmlCurrentStoppable.currentTime = 0;
+    htmlCurrentStoppable = null;
+  }
+}
+
+// ─── Web Audio API path (Android, Desktop) ────────────────────────────────────
+
+const ctx = isIOS
+  ? null
+  : new (
+      window.AudioContext ??
+      (
+        window as unknown as {
+          webkitAudioContext: typeof AudioContext;
+        }
+      ).webkitAudioContext
+    )();
+
+const buffers = new Map<SoundKey, AudioBuffer>();
+
+const rawFetches = new Map<SoundKey, Promise<ArrayBuffer>>();
+
+function prefetch(key: SoundKey, src: string) {
   rawFetches.set(
     key,
     fetch(src)
@@ -33,18 +108,20 @@ function prefetch(key: BufferKey, src: string) {
   );
 }
 
-prefetch('gong-in', '/gong_start.wav');
-prefetch('gong-out', '/gong_end.wav');
-prefetch('gong-finish', '/gong_finish.mp3');
-prefetch('breathe-in', '/breathing-in.mp3');
-prefetch('hold', '/hold.mp3');
-prefetch('breathe-out', '/breathing-out.mp3');
-prefetch('ending', '/ending.mp3');
+if (!isIOS) {
+  prefetch('gong-in', SRCS['gong-in']);
+  prefetch('gong-out', SRCS['gong-out']);
+  prefetch('gong-finish', SRCS['gong-finish']);
+  prefetch('breathe-in', SRCS['breathe-in']);
+  prefetch('hold', SRCS['hold']);
+  prefetch('breathe-out', SRCS['breathe-out']);
+  prefetch('ending', SRCS['ending']);
+}
 
-// Decode all fetched buffers. Context must be running before calling this.
 let decoding: Promise<void> | null = null;
 
 async function decodeAll(): Promise<void> {
+  if (!ctx) return;
   await Promise.all(
     [...rawFetches.entries()]
       .filter(([key]) => !buffers.has(key))
@@ -61,24 +138,20 @@ async function decodeAll(): Promise<void> {
   );
 }
 
-// Call ctx.resume() at the earliest possible moment — touchstart fires before
-// click, so by the time React's onClick chain runs the context is already
-// resuming or running. This is the key unlock for iOS WebKit, which expires
-// the user activation token quickly through async chains.
 function earlyUnlock() {
+  if (!ctx) return;
   if (ctx.state === 'suspended') ctx.resume();
 }
 document.addEventListener('touchstart', earlyUnlock, { passive: true });
 document.addEventListener('mousedown', earlyUnlock);
 
-// Re-resume if iOS suspends the context when the app goes to background.
 document.addEventListener('visibilitychange', () => {
+  if (!ctx) return;
   if (document.visibilityState === 'visible' && ctx.state === 'suspended') {
     ctx.resume();
   }
 });
 
-// Tracks the currently playing stoppable source (Flow/CO₂ sounds only).
 let currentSource: AudioBufferSourceNode | null = null;
 
 function stopCurrent() {
@@ -92,8 +165,8 @@ function stopCurrent() {
   }
 }
 
-/** Play a gong sound freely — no stopping, no overlap tracking (~1.7s gongs). */
-function playFree(key: BufferKey) {
+function playFree(key: SoundKey) {
+  if (!ctx) return;
   const buffer = buffers.get(key);
   if (!buffer) return;
   const source = ctx.createBufferSource();
@@ -102,8 +175,8 @@ function playFree(key: BufferKey) {
   source.start(0);
 }
 
-/** Stop whatever is playing, then play a new sound (for 16s Flow/CO₂ sounds). */
-function playStoppable(key: BufferKey) {
+function playStoppable(key: SoundKey) {
+  if (!ctx) return;
   stopCurrent();
   const buffer = buffers.get(key);
   if (!buffer) return;
@@ -117,6 +190,8 @@ function playStoppable(key: BufferKey) {
   currentSource = source;
 }
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
 export function useGong() {
   const enabledRef = useRef(false);
 
@@ -124,76 +199,74 @@ export function useGong() {
     enabledRef.current = enabled;
   }, []);
 
-  /**
-   * Golden-standard iOS unlock sequence. Call from a button click handler.
-   *
-   * 1. await ctx.resume()        — waits until context is truly running
-   * 2. Play a 1-frame silent buffer — mandatory extra unlock for some iOS versions
-   * 3. Decode all audio files    — safe now that context is running
-   *
-   * Wrapped in try/catch so a failure never blocks the timer from starting.
-   */
   const warmUp = useCallback(async () => {
+    if (isIOS) {
+      // htmlUnlock must run before any await — it calls audio.play() synchronously
+      // within the user gesture chain, which is what iOS requires.
+      htmlUnlock();
+      return;
+    }
     try {
-      // Step 1: resume (must be called synchronously within the user gesture —
-      // calling an async function from a click handler satisfies this on all browsers)
-      if (ctx.state !== 'running') await ctx.resume();
-
-      // Step 2: play a 1-frame silent buffer — the iOS "unlock" trick
-      const silentBuf = ctx.createBuffer(1, 1, ctx.sampleRate);
-      const unlock = ctx.createBufferSource();
-      unlock.buffer = silentBuf;
-      unlock.connect(ctx.destination);
-      unlock.start(0);
-
-      // Step 3: decode all audio now that context is confirmed running
+      if (ctx && ctx.state !== 'running') await ctx.resume();
+      if (ctx) {
+        const silentBuf = ctx.createBuffer(1, 1, ctx.sampleRate);
+        const unlock = ctx.createBufferSource();
+        unlock.buffer = silentBuf;
+        unlock.connect(ctx.destination);
+        unlock.start(0);
+      }
       if (!decoding) decoding = decodeAll();
       await decoding;
     } catch {
-      // Audio failed — timer will still start, just silently
-      decoding = null; // reset so next attempt can retry
+      decoding = null;
     }
   }, []);
 
-  // Progressive Box sounds (free-playing gong)
   const playIn = useCallback(() => {
     if (!enabledRef.current) return;
-    playFree('gong-in');
+    if (isIOS) htmlPlayFree('gong-in');
+    else playFree('gong-in');
   }, []);
 
   const playOut = useCallback(() => {
     if (!enabledRef.current) return;
-    playFree('gong-out');
+    if (isIOS) htmlPlayFree('gong-out');
+    else playFree('gong-out');
   }, []);
 
   const playFinish = useCallback(() => {
     if (!enabledRef.current) return;
-    playFree('gong-finish');
+    if (isIOS) htmlPlayFree('gong-finish');
+    else playFree('gong-finish');
   }, []);
 
-  // Flow + CO₂ sounds (stoppable on phase change)
   const playBreatheIn = useCallback(() => {
     if (!enabledRef.current) return;
-    playStoppable('breathe-in');
+    if (isIOS) htmlPlayStoppable('breathe-in');
+    else playStoppable('breathe-in');
   }, []);
 
   const playHold = useCallback(() => {
     if (!enabledRef.current) return;
-    playStoppable('hold');
+    if (isIOS) htmlPlayStoppable('hold');
+    else playStoppable('hold');
   }, []);
 
   const playBreatheOut = useCallback(() => {
     if (!enabledRef.current) return;
-    playStoppable('breathe-out');
+    if (isIOS) htmlPlayStoppable('breathe-out');
+    else playStoppable('breathe-out');
   }, []);
 
   const playEnding = useCallback(() => {
     if (!enabledRef.current) return;
-    playStoppable('ending');
+    if (isIOS) htmlPlayStoppable('ending');
+    else playStoppable('ending');
   }, []);
 
   const stopCurrentSound = useCallback(() => {
-    stopCurrent();
+    if (isIOS) htmlStopCurrent();
+    else stopCurrent();
   }, []);
 
   return {
