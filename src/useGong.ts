@@ -1,17 +1,46 @@
 import { useRef, useCallback } from 'react';
 
-const audioIn = new Audio('/gong_start.wav');
-const audioOut = new Audio('/gong_end.wav');
-const audioFinish = new Audio('/gong_finish.mp3');
+// Web Audio API context — once resumed via a user gesture, stays unlocked indefinitely.
+// This is the reliable solution for iOS Safari, which silently revokes HTMLAudioElement
+// playback permission after a while.
+const ctx = new (
+  window.AudioContext ??
+  (
+    window as unknown as {
+      webkitAudioContext: typeof AudioContext;
+    }
+  ).webkitAudioContext
+)();
 
-// Keep references to playing nodes so they aren't garbage collected mid-playback
-const playing = new Set<HTMLAudioElement>();
+type BufferKey = 'in' | 'out' | 'finish';
 
-function playClone(source: HTMLAudioElement) {
-  const a = source.cloneNode() as HTMLAudioElement;
-  playing.add(a);
-  a.addEventListener('ended', () => playing.delete(a));
-  a.play().catch(() => playing.delete(a));
+const buffers = new Map<BufferKey, AudioBuffer>();
+
+async function loadBuffer(key: BufferKey, src: string) {
+  const res = await fetch(src);
+  const raw = await res.arrayBuffer();
+  const buffer = await ctx.decodeAudioData(raw);
+  buffers.set(key, buffer);
+}
+
+loadBuffer('in', '/gong_start.wav');
+loadBuffer('out', '/gong_end.wav');
+loadBuffer('finish', '/gong_finish.mp3');
+
+// Re-resume if iOS suspends the context when the app briefly goes to background
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ctx.state === 'suspended') {
+    ctx.resume();
+  }
+});
+
+function playBuffer(key: BufferKey) {
+  const buffer = buffers.get(key);
+  if (!buffer) return;
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.start(0);
 }
 
 export function useGong() {
@@ -21,35 +50,26 @@ export function useGong() {
     enabledRef.current = enabled;
   }, []);
 
-  /** Call from a user-gesture handler to unlock audio on mobile browsers. */
+  /** Call from a user-gesture handler to unlock audio on iOS. */
   const warmUp = useCallback(() => {
-    for (const a of [audioIn, audioOut, audioFinish]) {
-      a.muted = true;
-      a.play()
-        .then(() => {
-          a.pause();
-          a.muted = false;
-          a.currentTime = 0;
-        })
-        .catch(() => {
-          a.muted = false;
-        });
+    if (ctx.state === 'suspended') {
+      ctx.resume();
     }
   }, []);
 
   const playIn = useCallback(() => {
     if (!enabledRef.current) return;
-    playClone(audioIn);
+    playBuffer('in');
   }, []);
 
   const playOut = useCallback(() => {
     if (!enabledRef.current) return;
-    playClone(audioOut);
+    playBuffer('out');
   }, []);
 
   const playFinish = useCallback(() => {
     if (!enabledRef.current) return;
-    playClone(audioFinish);
+    playBuffer('finish');
   }, []);
 
   return { playIn, playOut, playFinish, warmUp, setEnabled, enabledRef };
