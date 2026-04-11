@@ -38,21 +38,28 @@ const htmlAudio = isIOS
 
 let htmlCurrentStoppable: HTMLAudioElement | null = null;
 
-function htmlUnlock() {
+async function htmlUnlock(): Promise<void> {
   if (!htmlAudio) return;
-  for (const audio of Object.values(htmlAudio)) {
-    audio.muted = true;
-    audio
-      .play()
-      .then(() => {
-        audio.pause();
-        audio.muted = false;
-        audio.currentTime = 0;
-      })
-      .catch(() => {
-        audio.muted = false;
-      });
-  }
+  await Promise.all(
+    Object.values(htmlAudio).map(
+      (audio) =>
+        new Promise<void>((resolve) => {
+          audio.muted = true;
+          audio
+            .play()
+            .then(() => {
+              audio.pause();
+              audio.muted = false;
+              audio.currentTime = 0;
+              resolve();
+            })
+            .catch(() => {
+              audio.muted = false;
+              resolve();
+            });
+        }),
+    ),
+  );
 }
 
 function htmlPlayFree(key: SoundKey) {
@@ -201,9 +208,10 @@ export function useGong() {
 
   const warmUp = useCallback(async () => {
     if (isIOS) {
-      // htmlUnlock must run before any await — it calls audio.play() synchronously
-      // within the user gesture chain, which is what iOS requires.
-      htmlUnlock();
+      // Await htmlUnlock so all elements are fully unpaused and unmuted before
+      // the first sound is played. The .play() calls still happen synchronously
+      // within the user gesture chain — we just wait for their .then() to settle.
+      await htmlUnlock();
       return;
     }
     try {
