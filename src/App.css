@@ -475,24 +475,68 @@
 /* Mobile: tighten spacing so everything fits on one screen */
 @media (max-height: 750px) {
   .app {
-    gap: 20px;
+    gap: 16px;
   }
 
   .title {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
 
   .description {
-    font-size: 0.75rem;
-    line-height: 1.4;
+    font-size: 0.72rem;
+    line-height: 1.35;
   }
 
   .settings {
-    gap: 10px;
+    gap: 6px;
   }
 
+  /* Flow settings rendered horizontally on short screens — label on the
+     left, stepper on the right. Saves ~30 px per row × 5 rows. */
   .flow-setting {
-    gap: 2px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 260px;
+    gap: 8px;
+  }
+
+  .flow-setting label {
+    font-size: 0.75rem;
+  }
+
+  .flow-setting .rounds-selector {
+    gap: 6px;
+  }
+
+  .flow-setting .rounds-selector button {
+    width: 26px;
+    height: 26px;
+    font-size: 0.85rem;
+  }
+
+  .flow-setting .rounds-value {
+    font-size: 0.95rem;
+    min-width: 3.5ch;
+  }
+
+  .preset-btn {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  .sound-toggle {
+    font-size: 0.75rem;
+    padding: 6px 14px;
+  }
+
+  .toggle-row {
+    gap: 6px;
+  }
+
+  .actions {
+    gap: 12px;
   }
 
   .tab {
@@ -522,5 +566,11 @@
 
   .btn {
     padding: 12px 36px;
+  }
+
+  /* Install hint drops when vertical room is tight — most iPhone users
+     with room to install already saw it. */
+  .install-hint {
+    display: none;
   }
 }
