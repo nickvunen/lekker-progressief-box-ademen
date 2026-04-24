@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useBreathingTimer } from './useBreathingTimer';
 import type { Phase } from './useBreathingTimer';
 import { useFlowBreathingTimer } from './useFlowBreathingTimer';
@@ -586,17 +586,46 @@ function BreathingBubble({
   phase: Phase;
   duration: number;
 }) {
-  const isExpanded = phase === 'breathe-in' || phase === 'hold-in';
-  const isTransitioning = phase === 'breathe-in' || phase === 'breathe-out';
+  // Each phase has a starting and ending scale. Active phases (breathe-in /
+  // breathe-out) animate between them; hold phases stay put.
+  const [startScale, endScale] = (() => {
+    switch (phase) {
+      case 'breathe-in':
+        return [0.35, 1] as const;
+      case 'hold-in':
+        return [1, 1] as const;
+      case 'breathe-out':
+        return [1, 0.35] as const;
+      case 'hold-out':
+        return [0.35, 0.35] as const;
+    }
+  })();
+
+  const isTransitioning = startScale !== endScale;
   const transitionMs = isTransitioning ? Math.max(0, duration) * 1000 : 0;
+
+  // Mount at startScale (so CSS has something to animate from), then flip
+  // to endScale on the next frame. Adjacent phases always meet at the same
+  // boundary (hold-out ends at 0.35 = breathe-in starts at 0.35, etc.), so
+  // persisted `scale` already matches `startScale` on phase changes.
+  const [scale, setScale] = useState(startScale);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setScale(endScale));
+    return () => cancelAnimationFrame(id);
+  }, [phase, endScale]);
+
+  // Only apply the transition duration when we're heading toward the end
+  // scale; on the priming frame keep it at 0 so the snap is instant.
+  const currentTransitionMs = scale === endScale ? transitionMs : 0;
 
   return (
     <div className="bubble-outer">
       <div
         className="bubble"
         style={{
-          transform: `scale(${isExpanded ? 1 : 0.35})`,
-          transitionDuration: `${transitionMs}ms`,
+          transform: `scale(${scale})`,
+          transitionDuration: `${currentTransitionMs}ms`,
           transitionTimingFunction: isTransitioning ? 'ease-in-out' : 'linear',
         }}
       />
