@@ -19,7 +19,8 @@ type Tab =
 
 type DisplayMode = 'numbers' | 'bubble';
 
-const PREP_SECONDS = 10;
+// 0 = off. Cycle order on the prep pill: 10 → 20 → 30 → 0 → 10 …
+const PREP_CYCLE = [10, 20, 30, 0] as const;
 
 const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
 
@@ -64,7 +65,10 @@ function App() {
     'displayMode',
     'numbers',
   );
-  const [prepEnabled, setPrepEnabled] = usePersistedState('prepEnabled', true);
+  const [prepSeconds, setPrepSeconds] = usePersistedState<number>(
+    'prepSeconds',
+    10,
+  );
 
   // Flow settings
   const [breatheIn, setBreatheIn] = usePersistedState('flow.breatheIn', 5.5);
@@ -166,7 +170,10 @@ function App() {
   };
 
   const togglePrep = () => {
-    setPrepEnabled((p) => !p);
+    setPrepSeconds((s) => {
+      const idx = PREP_CYCLE.indexOf(s as (typeof PREP_CYCLE)[number]);
+      return PREP_CYCLE[(idx + 1) % PREP_CYCLE.length];
+    });
   };
 
   // Sync gong enabled state on mount
@@ -215,15 +222,15 @@ function App() {
       }
     };
 
-    if (!prepEnabled) {
+    if (prepSeconds <= 0) {
       startExercise();
       return;
     }
 
     // rAF-driven prep countdown — accurate and tab-throttling resilient,
     // matching the pattern used by the breathing timers.
-    const endTime = performance.now() + PREP_SECONDS * 1000;
-    setPrepCountdown(PREP_SECONDS);
+    const endTime = performance.now() + prepSeconds * 1000;
+    setPrepCountdown(prepSeconds);
     const loop = () => {
       const remainingMs = endTime - performance.now();
       if (remainingMs <= 0) {
@@ -492,15 +499,15 @@ function App() {
               )}
 
               <button
-                className={`sound-toggle ${prepEnabled ? 'sound-on' : ''}`}
+                className={`sound-toggle ${prepSeconds > 0 ? 'sound-on' : ''}`}
                 onClick={togglePrep}
                 aria-label={
-                  prepEnabled
-                    ? 'Disable pre-start countdown'
-                    : 'Enable pre-start countdown'
+                  prepSeconds > 0
+                    ? `Pre-start countdown: ${prepSeconds} seconds`
+                    : 'Pre-start countdown off'
                 }
               >
-                {prepEnabled ? `⏱ ${PREP_SECONDS}s prep` : '⏱ Prep off'}
+                {prepSeconds > 0 ? `⏱ ${prepSeconds}s prep` : '⏱ Prep off'}
               </button>
             </div>
 
