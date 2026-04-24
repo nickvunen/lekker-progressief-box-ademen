@@ -19,6 +19,29 @@ type Tab =
 
 type DisplayMode = 'numbers' | 'bubble';
 
+type SoundLevel = 'off' | 'low' | 'medium' | 'high';
+
+const SOUND_VOLUMES: Record<SoundLevel, number> = {
+  off: 0,
+  low: 0.35,
+  medium: 0.65,
+  high: 1,
+};
+
+const SOUND_CYCLE: readonly SoundLevel[] = [
+  'off',
+  'low',
+  'medium',
+  'high',
+] as const;
+
+const SOUND_LABELS: Record<SoundLevel, string> = {
+  off: '🔕 Sound off',
+  low: '🔔 Sound low',
+  medium: '🔔 Sound med',
+  high: '🔔 Sound high',
+};
+
 type FlowPreset = {
   breatheIn: number;
   holdIn: number;
@@ -72,9 +95,9 @@ function App() {
     'progressiveBox.roundsPerIncrement',
     2,
   );
-  const [soundEnabled, setSoundEnabled] = usePersistedState(
-    'soundEnabled',
-    false,
+  const [soundLevel, setSoundLevel] = usePersistedState<SoundLevel>(
+    'soundLevel',
+    'medium',
   );
   const [displayMode, setDisplayMode] = usePersistedState<DisplayMode>(
     'displayMode',
@@ -200,9 +223,10 @@ function App() {
   const isActive = isRunning || isPrepping;
 
   const toggleSound = () => {
-    const next = !soundEnabled;
-    setSoundEnabled(next);
-    gong.setEnabled(next);
+    setSoundLevel((level) => {
+      const idx = SOUND_CYCLE.indexOf(level);
+      return SOUND_CYCLE[(idx + 1) % SOUND_CYCLE.length];
+    });
   };
 
   const toggleDisplayMode = () => {
@@ -266,8 +290,11 @@ function App() {
     music.currentTime = 0;
   };
 
-  // Sync gong enabled state on mount
-  gong.setEnabled(soundEnabled);
+  // Sync gong enabled/volume state with the current sound level. Runs on
+  // every render (cheap — just ref writes). On mount this also hydrates
+  // from the persisted level so a refresh keeps the user's choice.
+  gong.setEnabled(soundLevel !== 'off');
+  gong.setVolume(SOUND_VOLUMES[soundLevel]);
 
   const cancelPrep = useCallback(() => {
     if (prepRafRef.current !== null) {
@@ -607,11 +634,11 @@ function App() {
           <div className="actions">
             <div className="toggle-row">
               <button
-                className={`sound-toggle ${soundEnabled ? 'sound-on' : ''}`}
+                className={`sound-toggle ${soundLevel !== 'off' ? 'sound-on' : ''}`}
                 onClick={toggleSound}
-                aria-label={soundEnabled ? 'Disable sound' : 'Enable sound'}
+                aria-label={`Sound level: ${soundLevel}`}
               >
-                {soundEnabled ? '🔔 Sound on' : '🔕 Sound off'}
+                {SOUND_LABELS[soundLevel]}
               </button>
 
               {(activeTab === 'progressive-box' ||
