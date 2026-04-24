@@ -472,8 +472,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile: tighten spacing so everything fits on one screen */
-@media (max-height: 750px) {
+/* Compact layout for phones (portrait width ≤ 600 px catches all modern
+   Android + iPhone devices) and for any short window (≤ 750 px height,
+   covers desktop resized small and iPhone Safari with chrome visible).
+   The two conditions are OR-combined via the comma. */
+@media (max-width: 600px), (max-height: 750px) {
   .app {
     gap: 16px;
   }
