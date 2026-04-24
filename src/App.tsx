@@ -104,13 +104,16 @@ function App() {
   const gong = useGong();
   const wakeLock = useWakeLock();
 
-  // Progressive Box — old gong sounds, unchanged
+  // Progressive Box — shares the Flow sound set (breathe-in / hold /
+  // breathe-out) so every mode chimes the same way.
   const handleBoxPhaseChange = useCallback(
     (phase: Phase) => {
-      if (phase === 'breathe-in' || phase === 'hold-in') {
-        gong.playIn();
+      if (phase === 'breathe-in') {
+        gong.playBreatheIn();
+      } else if (phase === 'hold-in' || phase === 'hold-out') {
+        gong.playHold();
       } else {
-        gong.playOut();
+        gong.playBreatheOut();
       }
     },
     [gong],
@@ -201,18 +204,16 @@ function App() {
 
   const handleStart = async () => {
     const firstKey: SoundKey =
-      activeTab === 'progressive-box'
-        ? 'gong-in'
-        : activeTab === 'flow-breathing'
-          ? 'breathe-in'
-          : 'ending';
+      activeTab === 'progressive-box' || activeTab === 'flow-breathing'
+        ? 'breathe-in'
+        : 'ending';
     await gong.warmUp(firstKey);
     wakeLock.request();
 
     const startExercise = () => {
       if (activeTab === 'progressive-box') {
         boxTimer.start();
-        gong.playIn();
+        gong.playBreatheIn();
       } else if (activeTab === 'flow-breathing') {
         flowTimer.start();
         gong.playBreatheIn();
