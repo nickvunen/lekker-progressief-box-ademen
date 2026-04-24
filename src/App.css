@@ -232,6 +232,18 @@
   color: var(--accent);
 }
 
+/* "Save as custom" / "Update custom" — subtler than the apply chips so
+   the destructive-ish write action reads as secondary. */
+.preset-btn-save {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.preset-btn-save:hover {
+  opacity: 1;
+  border-style: solid;
+}
+
 /* Toggle row (sound + display mode pills) */
 .toggle-row {
   display: flex;

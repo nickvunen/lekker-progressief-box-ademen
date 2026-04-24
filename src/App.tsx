@@ -19,8 +19,23 @@ type Tab =
 
 type DisplayMode = 'numbers' | 'bubble';
 
+type FlowPreset = {
+  breatheIn: number;
+  holdIn: number;
+  breatheOut: number;
+  holdOut: number;
+};
+
 // 0 = off. Cycle order on the prep pill: 10 → 20 → 30 → 0 → 10 …
 const PREP_CYCLE = [10, 20, 30, 0] as const;
+
+function formatPresetValue(v: number): string {
+  return v % 1 === 0 ? `${v}` : v.toFixed(1);
+}
+
+function formatPreset(p: FlowPreset): string {
+  return `${formatPresetValue(p.breatheIn)}-${formatPresetValue(p.holdIn)}-${formatPresetValue(p.breatheOut)}-${formatPresetValue(p.holdOut)}`;
+}
 
 const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
 
@@ -82,6 +97,10 @@ function App() {
   const [totalMinutes, setTotalMinutes] = usePersistedState(
     'flow.totalMinutes',
     5,
+  );
+  const [customPreset, setCustomPreset] = usePersistedState<FlowPreset | null>(
+    'flow.customPreset',
+    null,
   );
 
   // CO2 settings
@@ -213,6 +232,18 @@ function App() {
       setBreatheOut(8);
       setHoldOut(0);
     }
+  };
+
+  const saveCustomPreset = () => {
+    setCustomPreset({ breatheIn, holdIn, breatheOut, holdOut });
+  };
+
+  const applyCustomPreset = () => {
+    if (!customPreset) return;
+    setBreatheIn(customPreset.breatheIn);
+    setHoldIn(customPreset.holdIn);
+    setBreatheOut(customPreset.breatheOut);
+    setHoldOut(customPreset.holdOut);
   };
 
   // Kick off background music. Called synchronously inside the Start click
@@ -472,6 +503,22 @@ function App() {
                   onClick={() => applyFlowPreset('4-7-8')}
                 >
                   4-7-8 · Relax
+                </button>
+                {customPreset && (
+                  <button
+                    className="preset-btn"
+                    onClick={applyCustomPreset}
+                    aria-label={`Apply custom preset ${formatPreset(customPreset)}`}
+                  >
+                    Custom · {formatPreset(customPreset)}
+                  </button>
+                )}
+                <button
+                  className="preset-btn preset-btn-save"
+                  onClick={saveCustomPreset}
+                  aria-label="Save current values as custom preset"
+                >
+                  {customPreset ? '✎ Update custom' : '+ Save as custom'}
                 </button>
               </div>
               <FlowSetting
