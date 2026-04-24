@@ -30,6 +30,11 @@ const SRCS: Record<SoundKey, string> = {
 // than the source is pointless, so any fade duration is clamped to this.
 const SOURCE_MAX_SECONDS = 16;
 
+// Base playback level for the stoppable phase cue sounds (0–1). Lower than
+// 1.0 so the bell sits behind background music without overwhelming it.
+// The fade envelope ramps from this level down to silence.
+const CUE_VOLUME = 0.65;
+
 // ─── HTMLAudioElement path (iOS) ──────────────────────────────────────────────
 // HTML5 audio has 10+ years of reliable iOS support. We use it here because
 // Web Audio API activation tokens expire through async chains on iOS WebKit,
@@ -64,7 +69,7 @@ function htmlStartFade(audio: HTMLAudioElement, fadeSeconds: number) {
   const durMs = Math.min(fadeSeconds, SOURCE_MAX_SECONDS) * 1000;
   if (durMs <= 0) return;
   const startTime = performance.now();
-  audio.volume = 1;
+  audio.volume = CUE_VOLUME;
   // Detect iOS locking the volume at 1.0: if the write we just made didn't
   // stick, we know fades won't work on this device → disable and bail.
   audio.volume = 0.5;
@@ -73,7 +78,7 @@ function htmlStartFade(audio: HTMLAudioElement, fadeSeconds: number) {
     audio.volume = 1;
     return;
   }
-  audio.volume = 1;
+  audio.volume = CUE_VOLUME;
   const step = (now: number) => {
     const t = (now - startTime) / durMs;
     if (t >= 1) {
@@ -81,7 +86,7 @@ function htmlStartFade(audio: HTMLAudioElement, fadeSeconds: number) {
       htmlFadeRaf = null;
       return;
     }
-    audio.volume = 1 - t;
+    audio.volume = CUE_VOLUME * (1 - t);
     htmlFadeRaf = requestAnimationFrame(step);
   };
   htmlFadeRaf = requestAnimationFrame(step);
@@ -137,7 +142,7 @@ function htmlPlayStoppable(key: SoundKey, fadeSeconds?: number) {
   const audio = htmlAudio?.[key];
   if (!audio) return;
   audio.currentTime = 0;
-  audio.volume = 1;
+  audio.volume = CUE_VOLUME;
   audio.play().catch(() => {});
   htmlCurrentStoppable = audio;
   if (fadeSeconds && fadeSeconds > 0) {
@@ -264,19 +269,16 @@ function playStoppable(key: SoundKey, fadeSeconds?: number) {
   if (!buffer) return;
   const source = ctx.createBufferSource();
   source.buffer = buffer;
-  let gain: GainNode | null = null;
+  const gain = ctx.createGain();
+  const now = ctx.currentTime;
+  gain.gain.setValueAtTime(CUE_VOLUME, now);
   if (fadeSeconds && fadeSeconds > 0) {
-    gain = ctx.createGain();
     const durSeconds = Math.min(fadeSeconds, SOURCE_MAX_SECONDS);
-    const now = ctx.currentTime;
-    gain.gain.setValueAtTime(1, now);
     // Linear supplementary ramp on top of the source's baked-in exponential
     // decay — see the Audio notes in AGENTS.md before changing the curve.
     gain.gain.linearRampToValueAtTime(0.0001, now + durSeconds);
-    source.connect(gain).connect(ctx.destination);
-  } else {
-    source.connect(ctx.destination);
   }
+  source.connect(gain).connect(ctx.destination);
   source.addEventListener('ended', () => {
     if (currentSource === source) {
       currentSource = null;
