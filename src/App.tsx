@@ -69,6 +69,10 @@ function App() {
     'prepSeconds',
     10,
   );
+  const [musicEnabled, setMusicEnabled] = usePersistedState(
+    'musicEnabled',
+    false,
+  );
 
   // Flow settings
   const [breatheIn, setBreatheIn] = usePersistedState('flow.breatheIn', 5.5);
@@ -92,6 +96,11 @@ function App() {
   // Prep countdown (null = not prepping)
   const [prepCountdown, setPrepCountdown] = useState<number | null>(null);
   const prepRafRef = useRef<number | null>(null);
+
+  // Background music — looped, low-volume bed track behind sessions.
+  // Standalone <audio> element, not part of the useGong unlock list;
+  // unlocked on iOS by calling play() synchronously in the Start click.
+  const musicAudioRef = useRef<HTMLAudioElement>(null);
 
   const flowSettings: FlowSettings = {
     breatheIn,
@@ -147,6 +156,11 @@ function App() {
 
   const handleComplete = useCallback(() => {
     gong.playEnding();
+    const music = musicAudioRef.current;
+    if (music) {
+      music.pause();
+      music.currentTime = 0;
+    }
   }, [gong]);
 
   const boxTimer = useBreathingTimer(roundsPerIncrement, handleBoxPhaseChange);
@@ -179,6 +193,30 @@ function App() {
     });
   };
 
+  const toggleMusic = () => {
+    setMusicEnabled((m) => !m);
+  };
+
+  // Kick off background music. Called synchronously inside the Start click
+  // so iOS treats it as a user-gesture-initiated play (required to unlock
+  // this audio element). No `await` must precede this call on the iOS path.
+  const startMusic = () => {
+    const music = musicAudioRef.current;
+    if (!music) return;
+    music.volume = 0.3;
+    music.currentTime = 0;
+    music.play().catch(() => {
+      // Autoplay blocked or load error — fail silently, session still works.
+    });
+  };
+
+  const stopMusic = () => {
+    const music = musicAudioRef.current;
+    if (!music) return;
+    music.pause();
+    music.currentTime = 0;
+  };
+
   // Sync gong enabled state on mount
   gong.setEnabled(soundEnabled);
 
@@ -203,6 +241,10 @@ function App() {
   };
 
   const handleStart = async () => {
+    // Kick off music synchronously before any await so iOS treats it as a
+    // user-gesture-initiated play (same rationale as the useGong unlock).
+    if (musicEnabled) startMusic();
+
     const firstKey: SoundKey =
       activeTab === 'progressive-box' || activeTab === 'flow-breathing'
         ? 'breathe-in'
@@ -252,6 +294,7 @@ function App() {
     flowTimer.stop();
     co2Timer.stop();
     gong.stopCurrentSound();
+    stopMusic();
     wakeLock.release();
   };
 
@@ -268,6 +311,13 @@ function App() {
 
   return (
     <div className="app">
+      <audio
+        ref={musicAudioRef}
+        src="/background-music.mp3"
+        loop
+        preload="none"
+      />
+
       {!isActive && (
         <div className="tabs">
           <button
@@ -509,6 +559,18 @@ function App() {
                 }
               >
                 {prepSeconds > 0 ? `⏱ ${prepSeconds}s prep` : '⏱ Prep off'}
+              </button>
+
+              <button
+                className={`sound-toggle ${musicEnabled ? 'sound-on' : ''}`}
+                onClick={toggleMusic}
+                aria-label={
+                  musicEnabled
+                    ? 'Disable background music'
+                    : 'Enable background music'
+                }
+              >
+                {musicEnabled ? '🎵 Music on' : '🎵 Music off'}
               </button>
             </div>
 

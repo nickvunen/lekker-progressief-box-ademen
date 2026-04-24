@@ -54,6 +54,12 @@ audio element **synchronously within the user gesture**. Rules:
 Audio files live in `public/` and are loaded by absolute URL (`/gong.mp3`,
 `/breathing-in.mp3`, etc.) — don't `import` them from `src/`.
 
+`public/background-music.mp3` is a separate looping bed track controlled by
+a standalone `<audio>` element in `App.tsx`, **not** part of the `useGong`
+unlock list. It's iOS-unlocked by calling `play()` synchronously at the top
+of `handleStart` (before any `await`). If you add another standalone audio
+element, follow the same pattern.
+
 `public/sw.js` has a hardcoded `PRECACHE_URLS` list that only caches
 `/`, `/gong.mp3`, `/favicon.svg`, `/icon-192.png`. Runtime cache picks up
 the rest. If you add a sound that must work offline on first load, add it
