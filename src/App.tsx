@@ -19,6 +19,8 @@ type Tab =
 
 type DisplayMode = 'numbers' | 'bubble';
 
+const PREP_SECONDS = 10;
+
 const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
 
 const TITLES: Record<Tab, string> = {
@@ -62,6 +64,7 @@ function App() {
     'displayMode',
     'numbers',
   );
+  const [prepEnabled, setPrepEnabled] = usePersistedState('prepEnabled', true);
 
   // Flow settings
   const [breatheIn, setBreatheIn] = usePersistedState('flow.breatheIn', 5.5);
@@ -81,6 +84,10 @@ function App() {
   const [journeyCurrentTime, setJourneyCurrentTime] = useState(0);
   const [journeyDuration, setJourneyDuration] = useState(0);
   const journeyAudioRef = useRef<HTMLAudioElement>(null);
+
+  // Prep countdown (null = not prepping)
+  const [prepCountdown, setPrepCountdown] = useState<number | null>(null);
+  const prepRafRef = useRef<number | null>(null);
 
   const flowSettings: FlowSettings = {
     breatheIn,
@@ -145,6 +152,8 @@ function App() {
 
   const isRunning =
     boxTimer.isRunning || flowTimer.isRunning || co2Timer.isRunning;
+  const isPrepping = prepCountdown !== null;
+  const isActive = isRunning || isPrepping;
 
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -156,8 +165,23 @@ function App() {
     setDisplayMode((m) => (m === 'numbers' ? 'bubble' : 'numbers'));
   };
 
+  const togglePrep = () => {
+    setPrepEnabled((p) => !p);
+  };
+
   // Sync gong enabled state on mount
   gong.setEnabled(soundEnabled);
+
+  const cancelPrep = useCallback(() => {
+    if (prepRafRef.current !== null) {
+      cancelAnimationFrame(prepRafRef.current);
+      prepRafRef.current = null;
+    }
+    setPrepCountdown(null);
+  }, []);
+
+  // Clean up any in-flight prep loop on unmount
+  useEffect(() => cancelPrep, [cancelPrep]);
 
   const handleTabChange = (tab: Tab) => {
     if (activeTab === 'breath-journey' && journeyAudioRef.current) {
@@ -176,20 +200,46 @@ function App() {
           ? 'breathe-in'
           : 'ending';
     await gong.warmUp(firstKey);
-    if (activeTab === 'progressive-box') {
-      boxTimer.start();
-      gong.playIn();
-    } else if (activeTab === 'flow-breathing') {
-      flowTimer.start();
-      gong.playBreatheIn();
-    } else {
-      co2Timer.start();
-      gong.playEnding(); // CO₂ starts with the rest phase
-    }
     wakeLock.request();
+
+    const startExercise = () => {
+      if (activeTab === 'progressive-box') {
+        boxTimer.start();
+        gong.playIn();
+      } else if (activeTab === 'flow-breathing') {
+        flowTimer.start();
+        gong.playBreatheIn();
+      } else {
+        co2Timer.start();
+        gong.playEnding(); // CO₂ starts with the rest phase
+      }
+    };
+
+    if (!prepEnabled) {
+      startExercise();
+      return;
+    }
+
+    // rAF-driven prep countdown — accurate and tab-throttling resilient,
+    // matching the pattern used by the breathing timers.
+    const endTime = performance.now() + PREP_SECONDS * 1000;
+    setPrepCountdown(PREP_SECONDS);
+    const loop = () => {
+      const remainingMs = endTime - performance.now();
+      if (remainingMs <= 0) {
+        prepRafRef.current = null;
+        setPrepCountdown(null);
+        startExercise();
+        return;
+      }
+      setPrepCountdown(Math.ceil(remainingMs / 1000));
+      prepRafRef.current = requestAnimationFrame(loop);
+    };
+    prepRafRef.current = requestAnimationFrame(loop);
   };
 
   const handleStop = () => {
+    cancelPrep();
     boxTimer.stop();
     flowTimer.stop();
     co2Timer.stop();
@@ -210,7 +260,7 @@ function App() {
 
   return (
     <div className="app">
-      {!isRunning && (
+      {!isActive && (
         <div className="tabs">
           <button
             className={`tab ${activeTab === 'progressive-box' ? 'tab-active' : ''}`}
@@ -241,7 +291,7 @@ function App() {
 
       <h1 className="title">{TITLES[activeTab]}</h1>
 
-      {(!isRunning || activeTab === 'breath-journey') && (
+      {(!isActive || activeTab === 'breath-journey') && (
         <p className="description">{DESCRIPTIONS[activeTab]}</p>
       )}
 
@@ -306,7 +356,7 @@ function App() {
             </div>
           </div>
         </div>
-      ) : !isRunning ? (
+      ) : !isActive ? (
         <>
           {activeTab === 'progressive-box' && (
             <div className="settings">
@@ -440,6 +490,18 @@ function App() {
                   {displayMode === 'bubble' ? '🫧 Bubble' : '🔢 Numbers'}
                 </button>
               )}
+
+              <button
+                className={`sound-toggle ${prepEnabled ? 'sound-on' : ''}`}
+                onClick={togglePrep}
+                aria-label={
+                  prepEnabled
+                    ? 'Disable pre-start countdown'
+                    : 'Enable pre-start countdown'
+                }
+              >
+                {prepEnabled ? `⏱ ${PREP_SECONDS}s prep` : '⏱ Prep off'}
+              </button>
             </div>
 
             <div className="controls">
@@ -463,71 +525,88 @@ function App() {
         </>
       ) : (
         <>
-          {activeTab === 'progressive-box' && (
+          {isPrepping ? (
             <div className="timer-display">
-              <div className="phase-label phase-enter" key={boxTimer.phase}>
-                {boxTimer.phaseLabel}
+              <div className="phase-label phase-enter" key="prep">
+                Get ready
               </div>
-              {displayMode === 'bubble' ? (
-                <BreathingBubble
-                  phase={boxTimer.phase}
-                  duration={boxTimer.currentDuration}
-                />
-              ) : (
-                <div
-                  className="countdown countdown-tick"
-                  key={boxTimer.secondsLeft}
-                >
-                  {boxTimer.secondsLeft}
-                </div>
-              )}
-              <div className="info">
-                {boxTimer.currentDuration}s &middot; round {boxTimer.roundInSet}
-                /{roundsPerIncrement}
+              <div className="countdown countdown-tick" key={prepCountdown}>
+                {prepCountdown}
               </div>
+              <div className="info">Find a comfortable position</div>
             </div>
-          )}
-
-          {activeTab === 'flow-breathing' && (
-            <div className="timer-display">
-              <div className="phase-label phase-enter" key={flowTimer.phase}>
-                {flowTimer.phaseLabel}
-              </div>
-              {displayMode === 'bubble' ? (
-                <BreathingBubble
-                  phase={flowTimer.phase}
-                  duration={flowTimer.currentDuration}
-                />
-              ) : (
-                <div className="countdown-wrapper">
-                  <div
-                    className={`countdown countdown-tick ${flowTimer.displayTime.includes('.') ? 'countdown-half' : ''}`}
-                    key={flowTimer.displayTime}
-                  >
-                    {flowTimer.displayTime}
+          ) : (
+            <>
+              {activeTab === 'progressive-box' && (
+                <div className="timer-display">
+                  <div className="phase-label phase-enter" key={boxTimer.phase}>
+                    {boxTimer.phaseLabel}
+                  </div>
+                  {displayMode === 'bubble' ? (
+                    <BreathingBubble
+                      phase={boxTimer.phase}
+                      duration={boxTimer.currentDuration}
+                    />
+                  ) : (
+                    <div
+                      className="countdown countdown-tick"
+                      key={boxTimer.secondsLeft}
+                    >
+                      {boxTimer.secondsLeft}
+                    </div>
+                  )}
+                  <div className="info">
+                    {boxTimer.currentDuration}s &middot; round{' '}
+                    {boxTimer.roundInSet}/{roundsPerIncrement}
                   </div>
                 </div>
               )}
-              <div className="info">{flowTimer.remainingTime}</div>
-            </div>
-          )}
 
-          {activeTab === 'co2-table' && (
-            <div className="timer-display">
-              <div
-                className="phase-label phase-enter"
-                key={co2Timer.phase + co2Timer.roundInfo}
-              >
-                {co2Timer.phaseLabel}
-              </div>
-              <div
-                className="countdown countdown-tick"
-                key={co2Timer.countdown}
-              >
-                {co2Timer.countdown}
-              </div>
-              <div className="info">{co2Timer.roundInfo}</div>
-            </div>
+              {activeTab === 'flow-breathing' && (
+                <div className="timer-display">
+                  <div
+                    className="phase-label phase-enter"
+                    key={flowTimer.phase}
+                  >
+                    {flowTimer.phaseLabel}
+                  </div>
+                  {displayMode === 'bubble' ? (
+                    <BreathingBubble
+                      phase={flowTimer.phase}
+                      duration={flowTimer.currentDuration}
+                    />
+                  ) : (
+                    <div className="countdown-wrapper">
+                      <div
+                        className={`countdown countdown-tick ${flowTimer.displayTime.includes('.') ? 'countdown-half' : ''}`}
+                        key={flowTimer.displayTime}
+                      >
+                        {flowTimer.displayTime}
+                      </div>
+                    </div>
+                  )}
+                  <div className="info">{flowTimer.remainingTime}</div>
+                </div>
+              )}
+
+              {activeTab === 'co2-table' && (
+                <div className="timer-display">
+                  <div
+                    className="phase-label phase-enter"
+                    key={co2Timer.phase + co2Timer.roundInfo}
+                  >
+                    {co2Timer.phaseLabel}
+                  </div>
+                  <div
+                    className="countdown countdown-tick"
+                    key={co2Timer.countdown}
+                  >
+                    {co2Timer.countdown}
+                  </div>
+                  <div className="info">{co2Timer.roundInfo}</div>
+                </div>
+              )}
+            </>
           )}
 
           <div className="controls">
