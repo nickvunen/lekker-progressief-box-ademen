@@ -50,6 +50,23 @@ audio element **synchronously within the user gesture**. Rules:
   priority key. Preserve that split.
 - Sounds split into "free" (overlapping gongs) and "stoppable" (stateful
   narration tracks). `stopCurrentSound` only affects the stoppable slot.
+- The stoppable plays (`playBreatheIn` / `playHold` / `playBreatheOut`)
+  take an optional `fadeSeconds` arg — a **linear** supplementary gain
+  ramp to silence on top of the source's baked-in exponential decay, so
+  the bell ends with the count instead of getting chopped. **Do not
+  switch this to an exponential ramp**: the mp3s already decay
+  exponentially and compounding kills the bell character on short phases
+  (see the inspection table in `useGong.ts` nearby the `SOURCE_MAX_SECONDS`
+  constant). All four cue files are exactly 16.032s so the fade clamps
+  at `SOURCE_MAX_SECONDS`. Timer hooks pass the phase duration into the
+  `onPhaseChange(phase, duration)` callback — the hook fires the callback
+  before its own `setState`, so the React-state value is stale at that
+  moment; always use the callback argument rather than reading
+  `timer.currentDuration` from App state.
+- iOS volume feature-detects at first fade attempt
+  (`audio.volume = 0.5` write+readback). If iOS locks volume at 1.0, the
+  whole session falls back to un-faded playback — this must remain a
+  silent fallback, not an error.
 
 Audio files live in `public/` and are loaded by absolute URL (`/gong.mp3`,
 `/breathing-in.mp3`, etc.) — don't `import` them from `src/`.

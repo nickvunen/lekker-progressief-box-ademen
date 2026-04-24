@@ -44,7 +44,7 @@ function formatCountdown(ms: number): string {
 
 export function useCO2Timer(
   holdSeconds: number,
-  onPhaseChange?: (phase: CO2Phase) => void,
+  onPhaseChange?: (phase: CO2Phase, duration: number) => void,
   onComplete?: () => void,
 ) {
   const [state, setState] = useState<TimerState>(INITIAL_STATE);
@@ -93,7 +93,7 @@ export function useCO2Timer(
           // Rest done → start hold
           s.phaseIndex = 1;
           s.phaseStartTime = now;
-          onPhaseChangeRef.current?.('hold');
+          onPhaseChangeRef.current?.('hold', round.holdMs / 1000);
           setState({
             isRunning: true,
             phase: 'hold',
@@ -115,7 +115,7 @@ export function useCO2Timer(
           s.phaseIndex = 0;
           s.phaseStartTime = now;
           const nextRound = s.rounds[s.roundIndex];
-          onPhaseChangeRef.current?.('rest');
+          onPhaseChangeRef.current?.('rest', nextRound.restMs / 1000);
           setState({
             isRunning: true,
             phase: 'rest',

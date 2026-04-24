@@ -72,7 +72,7 @@ function formatRemaining(ms: number): string {
 
 export function useFlowBreathingTimer(
   settings: FlowSettings,
-  onPhaseChange?: (phase: Phase) => void,
+  onPhaseChange?: (phase: Phase, duration: number) => void,
   onComplete?: () => void,
 ) {
   const [state, setState] = useState<TimerState>(INITIAL_STATE);
@@ -145,7 +145,7 @@ export function useFlowBreathingTimer(
         s.phaseStartTime = now;
 
         const nextPhase = s.phases[s.phaseIndex];
-        onPhaseChangeRef.current?.(nextPhase.phase);
+        onPhaseChangeRef.current?.(nextPhase.phase, nextPhase.duration / 1000);
 
         const totalRemaining = s.finishing
           ? 0

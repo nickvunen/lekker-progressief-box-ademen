@@ -45,7 +45,7 @@ const INITIAL_STATE: TimerState = {
 
 export function useBreathingTimer(
   roundsPerIncrement: number,
-  onPhaseChange?: (phase: Phase) => void,
+  onPhaseChange?: (phase: Phase, duration: number) => void,
 ) {
   const [state, setState] = useState<TimerState>(INITIAL_STATE);
 
@@ -92,7 +92,7 @@ export function useBreathingTimer(
       }
 
       s.secondsLeft = s.currentDuration;
-      onPhaseChangeRef.current?.(PHASES[s.phaseIndex]);
+      onPhaseChangeRef.current?.(PHASES[s.phaseIndex], s.currentDuration);
     }
 
     const phase = PHASES[s.phaseIndex];

@@ -114,39 +114,43 @@ function App() {
   const wakeLock = useWakeLock();
 
   // Progressive Box — shares the Flow sound set (breathe-in / hold /
-  // breathe-out) so every mode chimes the same way.
+  // breathe-out) so every mode chimes the same way. Fade each cue over the
+  // new phase's duration so the bell ends with the count instead of
+  // getting chopped. Duration comes from the timer callback to avoid stale
+  // React state (the callback fires before setState applies).
   const handleBoxPhaseChange = useCallback(
-    (phase: Phase) => {
+    (phase: Phase, duration: number) => {
       if (phase === 'breathe-in') {
-        gong.playBreatheIn();
+        gong.playBreatheIn(duration);
       } else if (phase === 'hold-in' || phase === 'hold-out') {
-        gong.playHold();
+        gong.playHold(duration);
       } else {
-        gong.playBreatheOut();
+        gong.playBreatheOut(duration);
       }
     },
     [gong],
   );
 
-  // Flow — new stoppable sounds
+  // Flow — stoppable sounds, faded over each phase's own duration.
   const handleFlowPhaseChange = useCallback(
-    (phase: Phase) => {
+    (phase: Phase, duration: number) => {
       if (phase === 'breathe-in') {
-        gong.playBreatheIn();
+        gong.playBreatheIn(duration);
       } else if (phase === 'hold-in' || phase === 'hold-out') {
-        gong.playHold();
+        gong.playHold(duration);
       } else {
-        gong.playBreatheOut();
+        gong.playBreatheOut(duration);
       }
     },
     [gong],
   );
 
-  // CO₂ — new stoppable sounds
+  // CO₂ — fade the hold cue over the hold duration; rest cue stays un-faded
+  // as a punctuation.
   const handleCO2PhaseChange = useCallback(
-    (phase: CO2Phase) => {
+    (phase: CO2Phase, duration: number) => {
       if (phase === 'hold') {
-        gong.playHold();
+        gong.playHold(duration);
       } else {
         gong.playEnding();
       }
@@ -255,10 +259,11 @@ function App() {
     const startExercise = () => {
       if (activeTab === 'progressive-box') {
         boxTimer.start();
-        gong.playBreatheIn();
+        // Box always starts at the 3s base duration (stop() resets state).
+        gong.playBreatheIn(3);
       } else if (activeTab === 'flow-breathing') {
         flowTimer.start();
-        gong.playBreatheIn();
+        gong.playBreatheIn(breatheIn);
       } else {
         co2Timer.start();
         gong.playEnding(); // CO₂ starts with the rest phase
