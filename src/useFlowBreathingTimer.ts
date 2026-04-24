@@ -27,6 +27,7 @@ interface TimerState {
   phaseLabel: string;
   displayTime: string;
   remainingTime: string;
+  currentDuration: number; // seconds, duration of the current phase
 }
 
 const INITIAL_STATE: TimerState = {
@@ -35,6 +36,7 @@ const INITIAL_STATE: TimerState = {
   phaseLabel: 'Breathe In',
   displayTime: '',
   remainingTime: '',
+  currentDuration: 0,
 };
 
 // Show ".5" only during the initial half-second of a phase that starts with one;
@@ -155,6 +157,7 @@ export function useFlowBreathingTimer(
           phaseLabel: PHASE_LABELS[nextPhase.phase],
           displayTime: formatDisplay(nextPhase.duration, nextPhase.duration),
           remainingTime: formatRemaining(totalRemaining),
+          currentDuration: nextPhase.duration / 1000,
         });
       } else {
         // Mid-phase update
@@ -168,6 +171,7 @@ export function useFlowBreathingTimer(
           phaseLabel: PHASE_LABELS[currentPhase.phase],
           displayTime: formatDisplay(remainingInPhase, currentPhase.duration),
           remainingTime: formatRemaining(totalRemaining),
+          currentDuration: currentPhase.duration / 1000,
         });
       }
 
@@ -197,6 +201,7 @@ export function useFlowBreathingTimer(
       phaseLabel: PHASE_LABELS[firstPhase.phase],
       displayTime: formatDisplay(firstPhase.duration, firstPhase.duration),
       remainingTime: formatRemaining(s.totalMinutes * 60 * 1000),
+      currentDuration: firstPhase.duration / 1000,
     });
 
     cancelLoop();

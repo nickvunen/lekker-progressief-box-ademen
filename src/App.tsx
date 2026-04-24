@@ -17,6 +17,8 @@ type Tab =
   | 'co2-table'
   | 'breath-journey';
 
+type DisplayMode = 'numbers' | 'bubble';
+
 const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
 
 const TITLES: Record<Tab, string> = {
@@ -55,6 +57,10 @@ function App() {
   const [soundEnabled, setSoundEnabled] = usePersistedState(
     'soundEnabled',
     false,
+  );
+  const [displayMode, setDisplayMode] = usePersistedState<DisplayMode>(
+    'displayMode',
+    'numbers',
   );
 
   // Flow settings
@@ -144,6 +150,10 @@ function App() {
     const next = !soundEnabled;
     setSoundEnabled(next);
     gong.setEnabled(next);
+  };
+
+  const toggleDisplayMode = () => {
+    setDisplayMode((m) => (m === 'numbers' ? 'bubble' : 'numbers'));
   };
 
   // Sync gong enabled state on mount
@@ -407,13 +417,30 @@ function App() {
           )}
 
           <div className="actions">
-            <button
-              className={`sound-toggle ${soundEnabled ? 'sound-on' : ''}`}
-              onClick={toggleSound}
-              aria-label={soundEnabled ? 'Disable sound' : 'Enable sound'}
-            >
-              {soundEnabled ? '🔔 Sound on' : '🔕 Sound off'}
-            </button>
+            <div className="toggle-row">
+              <button
+                className={`sound-toggle ${soundEnabled ? 'sound-on' : ''}`}
+                onClick={toggleSound}
+                aria-label={soundEnabled ? 'Disable sound' : 'Enable sound'}
+              >
+                {soundEnabled ? '🔔 Sound on' : '🔕 Sound off'}
+              </button>
+
+              {(activeTab === 'progressive-box' ||
+                activeTab === 'flow-breathing') && (
+                <button
+                  className={`sound-toggle ${displayMode === 'bubble' ? 'sound-on' : ''}`}
+                  onClick={toggleDisplayMode}
+                  aria-label={
+                    displayMode === 'bubble'
+                      ? 'Switch to numbers'
+                      : 'Switch to bubble'
+                  }
+                >
+                  {displayMode === 'bubble' ? '🫧 Bubble' : '🔢 Numbers'}
+                </button>
+              )}
+            </div>
 
             <div className="controls">
               <button
@@ -441,12 +468,19 @@ function App() {
               <div className="phase-label phase-enter" key={boxTimer.phase}>
                 {boxTimer.phaseLabel}
               </div>
-              <div
-                className="countdown countdown-tick"
-                key={boxTimer.secondsLeft}
-              >
-                {boxTimer.secondsLeft}
-              </div>
+              {displayMode === 'bubble' ? (
+                <BreathingBubble
+                  phase={boxTimer.phase}
+                  duration={boxTimer.currentDuration}
+                />
+              ) : (
+                <div
+                  className="countdown countdown-tick"
+                  key={boxTimer.secondsLeft}
+                >
+                  {boxTimer.secondsLeft}
+                </div>
+              )}
               <div className="info">
                 {boxTimer.currentDuration}s &middot; round {boxTimer.roundInSet}
                 /{roundsPerIncrement}
@@ -459,14 +493,21 @@ function App() {
               <div className="phase-label phase-enter" key={flowTimer.phase}>
                 {flowTimer.phaseLabel}
               </div>
-              <div className="countdown-wrapper">
-                <div
-                  className={`countdown countdown-tick ${flowTimer.displayTime.includes('.') ? 'countdown-half' : ''}`}
-                  key={flowTimer.displayTime}
-                >
-                  {flowTimer.displayTime}
+              {displayMode === 'bubble' ? (
+                <BreathingBubble
+                  phase={flowTimer.phase}
+                  duration={flowTimer.currentDuration}
+                />
+              ) : (
+                <div className="countdown-wrapper">
+                  <div
+                    className={`countdown countdown-tick ${flowTimer.displayTime.includes('.') ? 'countdown-half' : ''}`}
+                    key={flowTimer.displayTime}
+                  >
+                    {flowTimer.displayTime}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="info">{flowTimer.remainingTime}</div>
             </div>
           )}
@@ -534,6 +575,31 @@ function FlowSetting({
           +
         </button>
       </div>
+    </div>
+  );
+}
+
+function BreathingBubble({
+  phase,
+  duration,
+}: {
+  phase: Phase;
+  duration: number;
+}) {
+  const isExpanded = phase === 'breathe-in' || phase === 'hold-in';
+  const isTransitioning = phase === 'breathe-in' || phase === 'breathe-out';
+  const transitionMs = isTransitioning ? Math.max(0, duration) * 1000 : 0;
+
+  return (
+    <div className="bubble-outer">
+      <div
+        className="bubble"
+        style={{
+          transform: `scale(${isExpanded ? 1 : 0.35})`,
+          transitionDuration: `${transitionMs}ms`,
+          transitionTimingFunction: isTransitioning ? 'ease-in-out' : 'linear',
+        }}
+      />
     </div>
   );
 }
