@@ -478,7 +478,7 @@
    The two conditions are OR-combined via the comma. */
 @media (max-width: 600px), (max-height: 750px) {
   .app {
-    gap: 16px;
+    gap: 18px;
   }
 
   .title {
@@ -486,47 +486,52 @@
   }
 
   .description {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     line-height: 1.35;
   }
 
   .settings {
-    gap: 6px;
+    gap: 8px;
   }
 
   /* Flow settings rendered horizontally on short screens — label on the
-     left, stepper on the right. Saves ~30 px per row × 5 rows. */
+     left, stepper on the right. Width widened to 300 px so the phase rows
+     visually align with the preset row and toggle row above/below. */
   .flow-setting {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    max-width: 260px;
+    max-width: 300px;
     gap: 8px;
   }
 
   .flow-setting label {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 
   .flow-setting .rounds-selector {
-    gap: 6px;
+    gap: 10px;
   }
 
   .flow-setting .rounds-selector button {
-    width: 26px;
-    height: 26px;
-    font-size: 0.85rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
   }
 
   .flow-setting .rounds-value {
-    font-size: 0.95rem;
+    font-size: 1rem;
     min-width: 3.5ch;
   }
 
+  .preset-row {
+    max-width: 320px;
+  }
+
   .preset-btn {
-    font-size: 0.7rem;
-    padding: 4px 10px;
+    font-size: 0.72rem;
+    padding: 5px 12px;
   }
 
   .sound-toggle {
@@ -535,11 +540,12 @@
   }
 
   .toggle-row {
-    gap: 6px;
+    gap: 8px;
+    max-width: 340px;
   }
 
   .actions {
-    gap: 12px;
+    gap: 14px;
   }
 
   .tab {
