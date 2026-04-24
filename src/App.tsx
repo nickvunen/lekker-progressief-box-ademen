@@ -203,7 +203,7 @@ function App() {
   const startMusic = () => {
     const music = musicAudioRef.current;
     if (!music) return;
-    music.volume = 0.3;
+    music.volume = 0.5;
     music.currentTime = 0;
     music.play().catch(() => {
       // Autoplay blocked or load error — fail silently, session still works.
