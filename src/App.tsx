@@ -33,11 +33,11 @@ const TITLES: Record<Tab, string> = {
 
 const DESCRIPTIONS: Record<Tab, string> = {
   'progressive-box':
-    'Breathe in, hold, breathe out, hold — all equal length. After a set number of rounds, the duration increases by one second.',
+    'Breathe in, hold, breathe out, hold — all equal length. After a set number of rounds, the duration increases by one second. Good for building stress tolerance.',
   'flow-breathing':
-    'A free-form breathing cycle with custom durations for each phase. Set your rhythm and total session time.',
+    'A free-form breathing cycle with custom durations for each phase. Set your rhythm and total session time. Classic patterns work well here — try 4-4-4-4 (box breathing) or 4-7-8 (relaxing).',
   'co2-table':
-    'Diver training: alternate between rest and breath-holds. Rest periods shorten each round to build CO₂ tolerance.',
+    'Alternate between rest and breath-holds. Rest periods shorten each round to train your stress tolerance and CO₂ tolerance.',
   'breath-journey':
     'Take a short breath journey to deeply relax and connect with yourself.',
 };
@@ -51,7 +51,7 @@ function formatTime(secs: number) {
 function App() {
   const [activeTab, setActiveTab] = usePersistedState<Tab>(
     'activeTab',
-    'progressive-box',
+    'flow-breathing',
   );
   const [roundsPerIncrement, setRoundsPerIncrement] = usePersistedState(
     'progressiveBox.roundsPerIncrement',
@@ -201,6 +201,20 @@ function App() {
     setMusicEnabled((m) => !m);
   };
 
+  const applyFlowPreset = (preset: '4-4-4-4' | '4-7-8') => {
+    if (preset === '4-4-4-4') {
+      setBreatheIn(4);
+      setHoldIn(4);
+      setBreatheOut(4);
+      setHoldOut(4);
+    } else {
+      setBreatheIn(4);
+      setHoldIn(7);
+      setBreatheOut(8);
+      setHoldOut(0);
+    }
+  };
+
   // Kick off background music. Called synchronously inside the Start click
   // so iOS treats it as a user-gesture-initiated play (required to unlock
   // this audio element). No `await` must precede this call on the iOS path.
@@ -326,16 +340,16 @@ function App() {
       {!isActive && (
         <div className="tabs">
           <button
-            className={`tab ${activeTab === 'progressive-box' ? 'tab-active' : ''}`}
-            onClick={() => handleTabChange('progressive-box')}
-          >
-            Box
-          </button>
-          <button
             className={`tab ${activeTab === 'flow-breathing' ? 'tab-active' : ''}`}
             onClick={() => handleTabChange('flow-breathing')}
           >
             Flow
+          </button>
+          <button
+            className={`tab ${activeTab === 'progressive-box' ? 'tab-active' : ''}`}
+            onClick={() => handleTabChange('progressive-box')}
+          >
+            Box
           </button>
           <button
             className={`tab ${activeTab === 'co2-table' ? 'tab-active' : ''}`}
@@ -446,6 +460,20 @@ function App() {
 
           {activeTab === 'flow-breathing' && (
             <div className="settings">
+              <div className="preset-row">
+                <button
+                  className="preset-btn"
+                  onClick={() => applyFlowPreset('4-4-4-4')}
+                >
+                  4-4-4-4 · Box
+                </button>
+                <button
+                  className="preset-btn"
+                  onClick={() => applyFlowPreset('4-7-8')}
+                >
+                  4-7-8 · Relax
+                </button>
+              </div>
               <FlowSetting
                 label="In breath"
                 value={breatheIn}
