@@ -7,6 +7,19 @@
   width: 100%;
 }
 
+/* Kill the iOS blue tap overlay + Android/Chrome blue focus halo so every
+   interactive element stays in its designed colour palette after a tap.
+   Keyboard focus (focus-visible) still gets a visible outline for a11y. */
+button {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .title {
   font-size: 1.5rem;
   font-weight: 300;
@@ -50,8 +63,10 @@
   transition: all 0.2s ease;
 }
 
-.tab:hover {
-  opacity: 0.7;
+@media (hover: hover) {
+  .tab:hover {
+    opacity: 0.7;
+  }
 }
 
 .tab-active {
@@ -162,8 +177,10 @@
   transition: all 0.2s ease;
 }
 
-.rounds-selector button:hover {
-  background: var(--accent-glow);
+@media (hover: hover) {
+  .rounds-selector button:hover {
+    background: var(--accent-glow);
+  }
 }
 
 .rounds-value {
@@ -195,9 +212,11 @@
   transition: all 0.2s ease;
 }
 
-.sound-toggle:hover {
-  border-color: var(--accent);
-  color: var(--text);
+@media (hover: hover) {
+  .sound-toggle:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
 }
 
 .sound-toggle.sound-on {
@@ -227,9 +246,11 @@
   transition: all 0.2s ease;
 }
 
-.preset-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+@media (hover: hover) {
+  .preset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 }
 
 /* "Save as custom" / "Update custom" — subtler than the apply chips so
@@ -239,9 +260,11 @@
   opacity: 0.7;
 }
 
-.preset-btn-save:hover {
-  opacity: 1;
-  border-style: solid;
+@media (hover: hover) {
+  .preset-btn-save:hover {
+    opacity: 1;
+    border-style: solid;
+  }
 }
 
 /* Toggle row (sound + display mode pills) */
@@ -344,8 +367,10 @@
   color: var(--bg);
 }
 
-.btn-start:hover {
-  background: #92c9b5;
+@media (hover: hover) {
+  .btn-start:hover {
+    background: #92c9b5;
+  }
 }
 
 .btn-stop {
@@ -354,8 +379,10 @@
   border: 1px solid var(--accent);
 }
 
-.btn-stop:hover {
-  background: var(--accent-glow);
+@media (hover: hover) {
+  .btn-stop:hover {
+    background: var(--accent-glow);
+  }
 }
 
 /* Fade transition */
@@ -414,8 +441,10 @@
   justify-content: center;
 }
 
-.journey-play-btn:hover {
-  background: #92c9b5;
+@media (hover: hover) {
+  .journey-play-btn:hover {
+    background: #92c9b5;
+  }
 }
 
 .journey-progress-container {
@@ -478,7 +507,7 @@
    The two conditions are OR-combined via the comma. */
 @media (max-width: 600px), (max-height: 750px) {
   .app {
-    gap: 18px;
+    gap: 22px;
   }
 
   .title {
@@ -487,23 +516,24 @@
 
   .description {
     font-size: 0.75rem;
-    line-height: 1.35;
+    line-height: 1.4;
+    max-width: 280px;
   }
 
   .settings {
-    gap: 8px;
+    gap: 12px;
   }
 
   /* Flow settings rendered horizontally on short screens — label on the
-     left, stepper on the right. Width widened to 300 px so the phase rows
-     visually align with the preset row and toggle row above/below. */
+     left, stepper on the right. Width constrained so the column feels
+     relaxed and aligns with the preset + toggle rows. */
   .flow-setting {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    max-width: 300px;
-    gap: 8px;
+    max-width: 260px;
+    gap: 10px;
   }
 
   .flow-setting label {
@@ -515,9 +545,9 @@
   }
 
   .flow-setting .rounds-selector button {
-    width: 30px;
-    height: 30px;
-    font-size: 0.9rem;
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
   }
 
   .flow-setting .rounds-value {
@@ -526,7 +556,7 @@
   }
 
   .preset-row {
-    max-width: 320px;
+    max-width: 280px;
   }
 
   .preset-btn {
@@ -541,11 +571,11 @@
 
   .toggle-row {
     gap: 8px;
-    max-width: 340px;
+    max-width: 300px;
   }
 
   .actions {
-    gap: 14px;
+    gap: 18px;
   }
 
   .tab {

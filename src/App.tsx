@@ -143,6 +143,9 @@ function App() {
   // Standalone <audio> element, not part of the useGong unlock list;
   // unlocked on iOS by calling play() synchronously in the Start click.
   const musicAudioRef = useRef<HTMLAudioElement>(null);
+  const musicFadeRafRef = useRef<number | null>(null);
+  const MUSIC_BASE_VOLUME = 0.5;
+  const MUSIC_FADE_MS = 1500;
 
   const flowSettings: FlowSettings = {
     breatheIn,
@@ -203,10 +206,26 @@ function App() {
   const handleComplete = useCallback(() => {
     gong.playEnding();
     const music = musicAudioRef.current;
-    if (music) {
-      music.pause();
-      music.currentTime = 0;
+    if (!music || music.paused) return;
+    if (musicFadeRafRef.current !== null) {
+      cancelAnimationFrame(musicFadeRafRef.current);
+      musicFadeRafRef.current = null;
     }
+    const startVol = music.volume;
+    const startTime = performance.now();
+    const step = (now: number) => {
+      const t = (now - startTime) / MUSIC_FADE_MS;
+      if (t >= 1) {
+        music.pause();
+        music.currentTime = 0;
+        music.volume = MUSIC_BASE_VOLUME;
+        musicFadeRafRef.current = null;
+        return;
+      }
+      music.volume = startVol * (1 - t);
+      musicFadeRafRef.current = requestAnimationFrame(step);
+    };
+    musicFadeRafRef.current = requestAnimationFrame(step);
   }, [gong]);
 
   const boxTimer = useBreathingTimer(roundsPerIncrement, handleBoxPhaseChange);
@@ -276,18 +295,43 @@ function App() {
   const startMusic = () => {
     const music = musicAudioRef.current;
     if (!music) return;
-    music.volume = 0.5;
+    if (musicFadeRafRef.current !== null) {
+      cancelAnimationFrame(musicFadeRafRef.current);
+      musicFadeRafRef.current = null;
+    }
+    music.volume = MUSIC_BASE_VOLUME;
     music.currentTime = 0;
     music.play().catch(() => {
       // Autoplay blocked or load error — fail silently, session still works.
     });
   };
 
+  // Fade the music to silence over MUSIC_FADE_MS, then pause. Safe to call
+  // when music isn't playing — it's a no-op in that case. Any in-flight
+  // fade is cancelled first.
   const stopMusic = () => {
     const music = musicAudioRef.current;
     if (!music) return;
-    music.pause();
-    music.currentTime = 0;
+    if (musicFadeRafRef.current !== null) {
+      cancelAnimationFrame(musicFadeRafRef.current);
+      musicFadeRafRef.current = null;
+    }
+    if (music.paused) return;
+    const startVol = music.volume;
+    const startTime = performance.now();
+    const step = (now: number) => {
+      const t = (now - startTime) / MUSIC_FADE_MS;
+      if (t >= 1) {
+        music.pause();
+        music.currentTime = 0;
+        music.volume = MUSIC_BASE_VOLUME;
+        musicFadeRafRef.current = null;
+        return;
+      }
+      music.volume = startVol * (1 - t);
+      musicFadeRafRef.current = requestAnimationFrame(step);
+    };
+    musicFadeRafRef.current = requestAnimationFrame(step);
   };
 
   // Sync gong enabled/volume state with the current sound level. Runs on
