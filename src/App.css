@@ -506,76 +506,78 @@ button:focus-visible {
    covers desktop resized small and iPhone Safari with chrome visible).
    The two conditions are OR-combined via the comma. */
 @media (max-width: 600px), (max-height: 750px) {
+  /* Fluid vertical rhythm — gaps scale with viewport height so an iPhone SE
+     stays tight while a Pixel 7 / iPhone Pro Max gets comfortable breathing
+     room, all without ever allowing the page to scroll. */
   .app {
-    gap: 22px;
+    gap: clamp(16px, 3.5vh, 36px);
   }
 
   .title {
-    font-size: 1.1rem;
+    font-size: clamp(1rem, 2.4vh, 1.35rem);
   }
 
   .description {
-    font-size: 0.75rem;
+    font-size: clamp(0.72rem, 1.7vh, 0.9rem);
     line-height: 1.4;
-    max-width: 280px;
+    max-width: 300px;
   }
 
   .settings {
-    gap: 12px;
+    gap: clamp(8px, 1.6vh, 16px);
   }
 
-  /* Flow settings rendered horizontally on short screens — label on the
-     left, stepper on the right. Width constrained so the column feels
-     relaxed and aligns with the preset + toggle rows. */
+  /* Flow settings rendered horizontally — label on the left, stepper on
+     the right. Width grows gently on bigger phones. */
   .flow-setting {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    max-width: 260px;
+    max-width: clamp(260px, 85%, 320px);
     gap: 10px;
   }
 
   .flow-setting label {
-    font-size: 0.8rem;
+    font-size: clamp(0.75rem, 1.7vh, 0.9rem);
   }
 
   .flow-setting .rounds-selector {
-    gap: 10px;
+    gap: clamp(8px, 1.3vh, 14px);
   }
 
   .flow-setting .rounds-selector button {
-    width: 28px;
-    height: 28px;
-    font-size: 0.85rem;
+    width: clamp(28px, 4.2vh, 36px);
+    height: clamp(28px, 4.2vh, 36px);
+    font-size: clamp(0.85rem, 1.9vh, 1rem);
   }
 
   .flow-setting .rounds-value {
-    font-size: 1rem;
+    font-size: clamp(0.95rem, 2vh, 1.15rem);
     min-width: 3.5ch;
   }
 
   .preset-row {
-    max-width: 280px;
+    max-width: clamp(280px, 90%, 340px);
   }
 
   .preset-btn {
-    font-size: 0.72rem;
-    padding: 5px 12px;
+    font-size: clamp(0.7rem, 1.5vh, 0.82rem);
+    padding: clamp(4px, 0.8vh, 7px) clamp(10px, 2vh, 16px);
   }
 
   .sound-toggle {
-    font-size: 0.75rem;
-    padding: 6px 14px;
+    font-size: clamp(0.72rem, 1.6vh, 0.85rem);
+    padding: clamp(5px, 1vh, 8px) clamp(12px, 2.2vh, 18px);
   }
 
   .toggle-row {
-    gap: 8px;
-    max-width: 300px;
+    gap: clamp(6px, 1.2vh, 10px);
+    max-width: clamp(300px, 90%, 360px);
   }
 
   .actions {
-    gap: 18px;
+    gap: clamp(12px, 2.4vh, 22px);
   }
 
   .tab {
