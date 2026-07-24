@@ -5,6 +5,7 @@ import { useFlowBreathingTimer } from './useFlowBreathingTimer';
 import type { FlowSettings } from './useFlowBreathingTimer';
 import { useCO2Timer } from './useCO2Timer';
 import type { CO2Phase } from './useCO2Timer';
+import { useMeditationTimer } from './useMeditationTimer';
 import { useGong } from './useGong';
 import type { SoundKey } from './useGong';
 import { useWakeLock } from './useWakeLock';
@@ -16,7 +17,8 @@ type Tab =
   | 'progressive-box'
   | 'flow-breathing'
   | 'co2-table'
-  | 'breath-journey';
+  | 'breath-journey'
+  | 'meditation';
 
 type DisplayMode = 'numbers' | 'bubble';
 
@@ -53,6 +55,12 @@ type FlowPreset = {
 // 0 = off. Cycle order on the prep pill: 10 → 20 → 30 → 0 → 10 …
 const PREP_CYCLE = [10, 20, 30, 0] as const;
 
+const MED_MINUTES = [5, 10, 15, 20] as const;
+// 0 = no interval bell.
+const MED_INTERVALS = [0, 1, 1.5, 2, 2.5] as const;
+// Gap between the three opening bells / three closing gongs.
+const GONG_GAP_MS = 2200;
+
 function formatPresetValue(v: number): string {
   return v % 1 === 0 ? `${v}` : v.toFixed(1);
 }
@@ -68,6 +76,7 @@ const TITLES: Record<Tab, string> = {
   'flow-breathing': 'Flow Breathing',
   'co2-table': 'CO₂ Table',
   'breath-journey': 'Breath Journey',
+  meditation: 'Meditation',
 };
 
 const DESCRIPTIONS: Record<Tab, string> = {
@@ -79,6 +88,8 @@ const DESCRIPTIONS: Record<Tab, string> = {
     'Alternate between rest and breath-holds. Rest periods shorten each round to train your stress tolerance and CO₂ tolerance.',
   'breath-journey':
     'Take a short breath journey to deeply relax and connect with yourself.',
+  meditation:
+    'A silent meditation timer. Three bells open the session, an optional interval bell keeps time, and three gongs close it. Choose your duration and settle in.',
 };
 
 function formatTime(secs: number) {
@@ -137,6 +148,16 @@ function App() {
   // CO2 settings
   const [co2Hold, setCo2Hold] = usePersistedState('co2.holdSeconds', 20);
 
+  // Meditation settings
+  const [medMinutes, setMedMinutes] = usePersistedState(
+    'meditation.minutes',
+    10,
+  );
+  const [medInterval, setMedInterval] = usePersistedState(
+    'meditation.intervalMinutes',
+    0, // 0 = no interval bell
+  );
+
   // Daily practice streak. `celebrate` holds the count to congratulate on
   // right after a qualifying session; null when there's nothing to show.
   const [streakCount, setStreakCount] = usePersistedState('streak.count', 0);
@@ -150,6 +171,9 @@ function App() {
   // streak only if they ran long enough.
   const exerciseStartRef = useRef<number | null>(null);
   const MIN_SESSION_MS = 60_000;
+  // Pending timeouts for the spaced opening bells / closing gongs, so Stop
+  // can cancel any that haven't fired yet.
+  const gongTimeoutsRef = useRef<number[]>([]);
 
   // Breath Journey player state
   const [journeyPlaying, setJourneyPlaying] = useState(false);
@@ -237,10 +261,7 @@ function App() {
     [gong],
   );
 
-  const handleComplete = useCallback(() => {
-    exerciseStartRef.current = null;
-    recordSession();
-    gong.playEnding();
+  const fadeOutMusic = useCallback(() => {
     const music = musicAudioRef.current;
     if (!music || music.paused) return;
     if (musicFadeRafRef.current !== null) {
@@ -262,7 +283,39 @@ function App() {
       musicFadeRafRef.current = requestAnimationFrame(step);
     };
     musicFadeRafRef.current = requestAnimationFrame(step);
-  }, [gong, recordSession]);
+  }, []);
+
+  const handleComplete = useCallback(() => {
+    exerciseStartRef.current = null;
+    recordSession();
+    gong.playEnding();
+    fadeOutMusic();
+  }, [gong, recordSession, fadeOutMusic]);
+
+  // Fire a sound three times, spaced, tracking timeouts so Stop can cancel.
+  const fireTripleGong = useCallback((play: () => void) => {
+    play();
+    for (let i = 1; i < 3; i++) {
+      const id = window.setTimeout(play, i * GONG_GAP_MS);
+      gongTimeoutsRef.current.push(id);
+    }
+  }, []);
+
+  const clearGongTimeouts = useCallback(() => {
+    gongTimeoutsRef.current.forEach(clearTimeout);
+    gongTimeoutsRef.current = [];
+  }, []);
+
+  const handleMeditationInterval = useCallback(() => {
+    gong.playIn();
+  }, [gong]);
+
+  const handleMeditationComplete = useCallback(() => {
+    exerciseStartRef.current = null;
+    recordSession();
+    fireTripleGong(gong.playFinish);
+    fadeOutMusic();
+  }, [gong, recordSession, fireTripleGong, fadeOutMusic]);
 
   const boxTimer = useBreathingTimer(roundsPerIncrement, handleBoxPhaseChange);
   const flowTimer = useFlowBreathingTimer(
@@ -271,9 +324,18 @@ function App() {
     handleComplete,
   );
   const co2Timer = useCO2Timer(co2Hold, handleCO2PhaseChange, handleComplete);
+  const medTimer = useMeditationTimer(
+    medMinutes,
+    medInterval,
+    handleMeditationInterval,
+    handleMeditationComplete,
+  );
 
   const isRunning =
-    boxTimer.isRunning || flowTimer.isRunning || co2Timer.isRunning;
+    boxTimer.isRunning ||
+    flowTimer.isRunning ||
+    co2Timer.isRunning ||
+    medTimer.isRunning;
   const isPrepping = prepCountdown !== null;
   const isActive = isRunning || isPrepping;
 
@@ -407,11 +469,14 @@ function App() {
     const firstKey: SoundKey =
       activeTab === 'progressive-box' || activeTab === 'flow-breathing'
         ? 'breathe-in'
-        : 'ending';
+        : activeTab === 'meditation'
+          ? 'gong-in'
+          : 'ending';
     await gong.warmUp(firstKey);
     wakeLock.request();
 
     const startExercise = () => {
+      clearGongTimeouts();
       exerciseStartRef.current = performance.now();
       if (activeTab === 'progressive-box') {
         boxTimer.start();
@@ -420,6 +485,9 @@ function App() {
       } else if (activeTab === 'flow-breathing') {
         flowTimer.start();
         gong.playBreatheIn(breatheIn);
+      } else if (activeTab === 'meditation') {
+        medTimer.start();
+        fireTripleGong(gong.playIn); // three opening bells
       } else {
         co2Timer.start();
         gong.playEnding(); // CO₂ starts with the rest phase
@@ -457,9 +525,11 @@ function App() {
       recordSession();
     }
     cancelPrep();
+    clearGongTimeouts();
     boxTimer.stop();
     flowTimer.stop();
     co2Timer.stop();
+    medTimer.stop();
     gong.stopCurrentSound();
     stopMusic();
     wakeLock.release();
@@ -529,6 +599,12 @@ function App() {
             onClick={() => handleTabChange('breath-journey')}
           >
             Journey
+          </button>
+          <button
+            className={`tab ${activeTab === 'meditation' ? 'tab-active' : ''}`}
+            onClick={() => handleTabChange('meditation')}
+          >
+            Meditate
           </button>
         </div>
       )}
@@ -753,6 +829,35 @@ function App() {
             </div>
           )}
 
+          {activeTab === 'meditation' && (
+            <div className="settings">
+              <label>Duration</label>
+              <div className="preset-row">
+                {MED_MINUTES.map((m) => (
+                  <button
+                    key={m}
+                    className={`preset-btn ${medMinutes === m ? 'preset-btn-active' : ''}`}
+                    onClick={() => setMedMinutes(m)}
+                  >
+                    {m} min
+                  </button>
+                ))}
+              </div>
+              <label>Interval bell</label>
+              <div className="preset-row">
+                {MED_INTERVALS.map((iv) => (
+                  <button
+                    key={iv}
+                    className={`preset-btn ${medInterval === iv ? 'preset-btn-active' : ''}`}
+                    onClick={() => setMedInterval(iv)}
+                  >
+                    {iv === 0 ? 'Off' : `${formatPresetValue(iv)} min`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="actions">
             <div className="toggle-row">
               <button
@@ -903,6 +1008,16 @@ function App() {
                     {co2Timer.countdown}
                   </div>
                   <div className="info">{co2Timer.roundInfo}</div>
+                </div>
+              )}
+
+              {activeTab === 'meditation' && (
+                <div className="timer-display">
+                  <div className="phase-label phase-enter" key="meditate">
+                    Meditate
+                  </div>
+                  <div className="countdown">{medTimer.countdown}</div>
+                  <div className="info">{medTimer.info}</div>
                 </div>
               )}
             </>

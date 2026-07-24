@@ -48,11 +48,11 @@ button:focus-visible {
 
 .tab {
   flex: 1;
-  padding: 12px 16px;
+  padding: 12px 8px;
   font-family: 'Mulish', system-ui, sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--text-muted);
   opacity: 0.4;
@@ -265,6 +265,13 @@ button:focus-visible {
     opacity: 1;
     border-style: solid;
   }
+}
+
+/* Selected pill in the meditation duration / interval rows. */
+.preset-btn-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
 }
 
 /* Toggle row (sound + display mode pills) */
