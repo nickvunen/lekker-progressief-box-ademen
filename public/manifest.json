@@ -4,8 +4,8 @@
   "description": "A progressive box breathing timer that gradually increases breath duration.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a2e28",
-  "theme_color": "#1a2e28",
+  "background_color": "#2B4238",
+  "theme_color": "#2B4238",
   "icons": [
     {
       "src": "/icon-192.png",

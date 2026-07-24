@@ -1,4 +1,4 @@
-const CACHE_NAME = 'box-breathing-v1';
+const CACHE_NAME = 'box-breathing-v2';
 
 const PRECACHE_URLS = ['/', '/gong.mp3', '/favicon.svg', '/icon-192.png'];
 
