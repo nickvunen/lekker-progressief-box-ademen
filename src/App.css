@@ -615,3 +615,44 @@ button:focus-visible {
     display: none;
   }
 }
+
+/* Brand opening splash — white three-waves mark + wordmark on dark green,
+   matching the brand guide (page 2). Auto-fades after ~2s. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  background: #2b4238;
+  pointer-events: none;
+  animation: splashFade 2.4s ease forwards;
+}
+
+.splash-logo {
+  width: 110px;
+  height: 110px;
+}
+
+.splash-word {
+  font-family: 'Neulis Alt', 'Mulish', system-ui, sans-serif;
+  font-weight: 300;
+  font-size: 1.9rem;
+  letter-spacing: 0.3em;
+  /* offset the trailing letter-spacing so the word stays optically centred */
+  text-indent: 0.3em;
+  color: #fffefd;
+}
+
+@keyframes splashFade {
+  0%,
+  83% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

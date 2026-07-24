@@ -1,6 +1,12 @@
-const CACHE_NAME = 'box-breathing-v2';
+const CACHE_NAME = 'box-breathing-v3';
 
-const PRECACHE_URLS = ['/', '/gong.mp3', '/favicon.svg', '/icon-192.png'];
+const PRECACHE_URLS = [
+  '/',
+  '/gong.mp3',
+  '/favicon.svg',
+  '/icon-192.png',
+  '/NeulisAlt-Light.ttf',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
