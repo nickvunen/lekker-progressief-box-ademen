@@ -9,6 +9,7 @@ import { useGong } from './useGong';
 import type { SoundKey } from './useGong';
 import { useWakeLock } from './useWakeLock';
 import { usePersistedState } from './usePersistedState';
+import { advanceStreak, todayISO } from './streak';
 import './App.css';
 
 type Tab =
@@ -136,6 +137,20 @@ function App() {
   // CO2 settings
   const [co2Hold, setCo2Hold] = usePersistedState('co2.holdSeconds', 20);
 
+  // Daily practice streak. `celebrate` holds the count to congratulate on
+  // right after a qualifying session; null when there's nothing to show.
+  const [streakCount, setStreakCount] = usePersistedState('streak.count', 0);
+  const [streakLastDate, setStreakLastDate] = usePersistedState<string | null>(
+    'streak.lastDate',
+    null,
+  );
+  const [celebrate, setCelebrate] = useState<number | null>(null);
+  // Wall-clock start of the actual exercise (set once prep is over). Used to
+  // qualify manually-stopped, endless sessions (Progressive Box) for the
+  // streak only if they ran long enough.
+  const exerciseStartRef = useRef<number | null>(null);
+  const MIN_SESSION_MS = 60_000;
+
   // Breath Journey player state
   const [journeyPlaying, setJourneyPlaying] = useState(false);
   const [journeyCurrentTime, setJourneyCurrentTime] = useState(0);
@@ -164,6 +179,18 @@ function App() {
 
   const gong = useGong();
   const wakeLock = useWakeLock();
+
+  // Count a qualifying session toward the daily streak (idempotent per day)
+  // and surface the celebratory message.
+  const recordSession = useCallback(() => {
+    const today = todayISO();
+    setStreakCount((prevCount) => {
+      const { count } = advanceStreak(streakLastDate, prevCount, today);
+      setCelebrate(count);
+      return count;
+    });
+    setStreakLastDate(today);
+  }, [streakLastDate, setStreakCount, setStreakLastDate]);
 
   // Progressive Box — shares the Flow sound set (breathe-in / hold /
   // breathe-out) so every mode chimes the same way. Fade each cue over the
@@ -211,6 +238,8 @@ function App() {
   );
 
   const handleComplete = useCallback(() => {
+    exerciseStartRef.current = null;
+    recordSession();
     gong.playEnding();
     const music = musicAudioRef.current;
     if (!music || music.paused) return;
@@ -233,7 +262,7 @@ function App() {
       musicFadeRafRef.current = requestAnimationFrame(step);
     };
     musicFadeRafRef.current = requestAnimationFrame(step);
-  }, [gong]);
+  }, [gong, recordSession]);
 
   const boxTimer = useBreathingTimer(roundsPerIncrement, handleBoxPhaseChange);
   const flowTimer = useFlowBreathingTimer(
@@ -359,6 +388,7 @@ function App() {
   useEffect(() => cancelPrep, [cancelPrep]);
 
   const handleTabChange = (tab: Tab) => {
+    setCelebrate(null);
     if (activeTab === 'breath-journey' && journeyAudioRef.current) {
       journeyAudioRef.current.pause();
       journeyAudioRef.current.currentTime = 0;
@@ -368,6 +398,8 @@ function App() {
   };
 
   const handleStart = async () => {
+    // Dismiss any lingering celebration from the previous session.
+    setCelebrate(null);
     // Kick off music synchronously before any await so iOS treats it as a
     // user-gesture-initiated play (same rationale as the useGong unlock).
     if (musicEnabled) startMusic();
@@ -380,6 +412,7 @@ function App() {
     wakeLock.request();
 
     const startExercise = () => {
+      exerciseStartRef.current = performance.now();
       if (activeTab === 'progressive-box') {
         boxTimer.start();
         // Box always starts at the 3s base duration (stop() resets state).
@@ -417,6 +450,12 @@ function App() {
   };
 
   const handleStop = () => {
+    // Endless / early-stopped sessions count only if practiced long enough.
+    const startedAt = exerciseStartRef.current;
+    exerciseStartRef.current = null;
+    if (startedAt !== null && performance.now() - startedAt >= MIN_SESSION_MS) {
+      recordSession();
+    }
     cancelPrep();
     boxTimer.stop();
     flowTimer.stop();
@@ -500,6 +539,18 @@ function App() {
         <p className="description">{DESCRIPTIONS[activeTab]}</p>
       )}
 
+      {!isActive && celebrate !== null && (
+        <p className="streak-celebrate">
+          {celebrate === 1
+            ? 'First session done — good job! 🔥'
+            : `${celebrate} days in a row — good job! 🎉`}
+        </p>
+      )}
+
+      {!isActive && celebrate === null && streakCount > 0 && (
+        <span className="streak-chip">🔥 {streakCount}-day streak</span>
+      )}
+
       {activeTab === 'breath-journey' ? (
         <div className="journey-player">
           <audio
@@ -516,6 +567,7 @@ function App() {
               if (journeyAudioRef.current)
                 journeyAudioRef.current.currentTime = 0;
               wakeLock.release();
+              recordSession();
             }}
             onTimeUpdate={(e) =>
               setJourneyCurrentTime((e.target as HTMLAudioElement).currentTime)

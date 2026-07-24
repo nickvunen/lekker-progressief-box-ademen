@@ -656,3 +656,26 @@ button:focus-visible {
     opacity: 0;
   }
 }
+
+/* Daily practice streak — persistent chip on the idle screen and a brief
+   celebratory line shown right after a qualifying session. */
+.streak-chip {
+  align-self: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--bg-light);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.streak-celebrate {
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+}
