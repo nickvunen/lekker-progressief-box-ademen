@@ -15,10 +15,13 @@ export type SoundKey =
   | 'breathe-out'
   | 'ending';
 
+// Meditation's opening/interval/closing bells reuse the shared 'ending'
+// cue so every mode chimes with the same bell, rather than the old
+// gong_start/gong_finish recordings.
 const SRCS: Record<SoundKey, string> = {
-  'gong-in': '/gong_start.wav',
+  'gong-in': '/ending.mp3',
   'gong-out': '/gong_end.wav',
-  'gong-finish': '/gong_finish.mp3',
+  'gong-finish': '/ending.mp3',
   'breathe-in': '/breathing-in.mp3',
   hold: '/hold.mp3',
   'breathe-out': '/breathing-out.mp3',

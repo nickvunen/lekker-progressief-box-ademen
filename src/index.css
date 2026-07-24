@@ -37,15 +37,19 @@ body {
   height: 100dvh;
   overflow: hidden;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
+/* Content is top-anchored rather than vertically centered so the nav bar
+   (and everything above the fold) sits at a fixed spot regardless of how
+   tall the active tab's content is — centering here made the nav jump
+   around whenever switching to a tab with a different content height. */
 #root {
   width: 100%;
   height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px;
   overflow: hidden;

@@ -4,6 +4,7 @@ interface TimerState {
   isRunning: boolean;
   countdown: string;
   info: string;
+  progress: number;
 }
 
 interface Internals {
@@ -17,6 +18,7 @@ const INITIAL_STATE: TimerState = {
   isRunning: false,
   countdown: '',
   info: '',
+  progress: 0,
 };
 
 function formatMMSS(ms: number): string {
@@ -103,7 +105,11 @@ export function useMeditationTimer(
         }
       }
 
-      setState((prev) => ({ ...prev, countdown: formatMMSS(remaining) }));
+      setState((prev) => ({
+        ...prev,
+        countdown: formatMMSS(remaining),
+        progress: elapsed / s.totalMs,
+      }));
       rafRef.current = requestAnimationFrame(loopRef.current!);
     };
   }, [cancelLoop]);
@@ -123,6 +129,7 @@ export function useMeditationTimer(
       isRunning: true,
       countdown: formatMMSS(totalMs),
       info: infoText(intervalMs, totalMs),
+      progress: 0,
     });
 
     cancelLoop();

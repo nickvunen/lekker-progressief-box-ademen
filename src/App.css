@@ -39,6 +39,31 @@ button:focus-visible {
   max-width: 300px;
 }
 
+/* Persistent brand mark — logo + wordmark, same look as the opening splash
+   but sized for the header and colored for the light background. Always
+   rendered (not conditioned on tab/active state) so it acts as a fixed
+   anchor at the top of the screen. */
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-logo {
+  width: 20px;
+  height: 20px;
+  fill: var(--accent-deep);
+}
+
+.brand-word {
+  font-family: 'Neulis Alt', 'Work Sans', system-ui, sans-serif;
+  font-weight: 300;
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  color: var(--ink);
+}
+
 /* Segmented sliding tab control */
 .tabs {
   position: relative;

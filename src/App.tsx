@@ -68,8 +68,6 @@ const PREP_CYCLE = [10, 20, 30, 0] as const;
 const MED_MINUTES = [5, 10, 15, 20] as const;
 // 0 = no interval bell.
 const MED_INTERVALS = [0, 1, 1.5, 2, 2.5] as const;
-// Gap between the three opening bells / three closing gongs.
-const GONG_GAP_MS = 2200;
 
 function formatPresetValue(v: number): string {
   return v % 1 === 0 ? `${v}` : v.toFixed(1);
@@ -99,7 +97,7 @@ const DESCRIPTIONS: Record<Tab, string> = {
   'breath-journey':
     'Take a short breath journey to deeply relax and connect with yourself.',
   meditation:
-    'A silent meditation timer. Three bells open the session, an optional interval bell keeps time, and three gongs close it. Choose your duration and settle in.',
+    'A silent meditation timer. A bell opens the session, an optional interval bell keeps time, and a closing bell ends it. Choose your duration and settle in.',
 };
 
 function formatTime(secs: number) {
@@ -181,9 +179,6 @@ function App() {
   // streak only if they ran long enough.
   const exerciseStartRef = useRef<number | null>(null);
   const MIN_SESSION_MS = 60_000;
-  // Pending timeouts for the spaced opening bells / closing gongs, so Stop
-  // can cancel any that haven't fired yet.
-  const gongTimeoutsRef = useRef<number[]>([]);
 
   // Breath Journey player state
   const [journeyPlaying, setJourneyPlaying] = useState(false);
@@ -302,20 +297,6 @@ function App() {
     fadeOutMusic();
   }, [gong, recordSession, fadeOutMusic]);
 
-  // Fire a sound three times, spaced, tracking timeouts so Stop can cancel.
-  const fireTripleGong = useCallback((play: () => void) => {
-    play();
-    for (let i = 1; i < 3; i++) {
-      const id = window.setTimeout(play, i * GONG_GAP_MS);
-      gongTimeoutsRef.current.push(id);
-    }
-  }, []);
-
-  const clearGongTimeouts = useCallback(() => {
-    gongTimeoutsRef.current.forEach(clearTimeout);
-    gongTimeoutsRef.current = [];
-  }, []);
-
   const handleMeditationInterval = useCallback(() => {
     gong.playIn();
   }, [gong]);
@@ -323,9 +304,9 @@ function App() {
   const handleMeditationComplete = useCallback(() => {
     exerciseStartRef.current = null;
     recordSession();
-    fireTripleGong(gong.playFinish);
+    gong.playFinish(); // closing bell
     fadeOutMusic();
-  }, [gong, recordSession, fireTripleGong, fadeOutMusic]);
+  }, [gong, recordSession, fadeOutMusic]);
 
   const boxTimer = useBreathingTimer(roundsPerIncrement, handleBoxPhaseChange);
   const flowTimer = useFlowBreathingTimer(
@@ -486,7 +467,6 @@ function App() {
     wakeLock.request();
 
     const startExercise = () => {
-      clearGongTimeouts();
       exerciseStartRef.current = performance.now();
       if (activeTab === 'progressive-box') {
         boxTimer.start();
@@ -497,7 +477,7 @@ function App() {
         gong.playBreatheIn(breatheIn);
       } else if (activeTab === 'meditation') {
         medTimer.start();
-        fireTripleGong(gong.playIn); // three opening bells
+        gong.playIn(); // opening bell
       } else {
         co2Timer.start();
         gong.playEnding(); // CO₂ starts with the rest phase
@@ -535,7 +515,6 @@ function App() {
       recordSession();
     }
     cancelPrep();
-    clearGongTimeouts();
     boxTimer.stop();
     flowTimer.stop();
     co2Timer.stop();
@@ -583,6 +562,24 @@ function App() {
         loop
         preload="none"
       />
+
+      <div className="brand-header" aria-hidden="true">
+        <svg
+          className="brand-logo"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 512 512"
+        >
+          <g transform="translate(-880.5 -169.8) scale(0.789)">
+            <path d="M 1395.832031 381 C 1398.425781 524.261719 1497.015625 644.078125 1630 678.84375 L 1630 698.351562 C 1486.476562 663.121094 1379.546875 534.765625 1376.917969 381 Z M 1395.832031 381 " />
+            <path d="M 1452.566406 381 C 1455.039062 492.675781 1528.71875 586.796875 1630 619.742188 L 1630 639.558594 C 1518.136719 605.921875 1436.171875 503.21875 1433.65625 381 Z M 1452.566406 381 " />
+            <path d="M 1509.921875 381 C 1512.1875 460.546875 1560.957031 528.445312 1630 558.476562 L 1630 578.933594 C 1550.292969 547.769531 1493.351562 471.179688 1491.007812 381 Z M 1509.921875 381 " />
+            <path d="M 1410.546875 577.238281 C 1414.140625 582.667969 1417.890625 587.992188 1421.78125 593.195312 C 1377.449219 644.273438 1317.808594 681.707031 1250 698.351562 L 1250 678.84375 C 1313.644531 662.203125 1369.410156 626.085938 1410.546875 577.238281 Z M 1410.546875 577.238281 " />
+            <path d="M 1381.085938 522.582031 C 1383.921875 529.222656 1386.957031 535.757812 1390.191406 542.171875 C 1355.332031 587.988281 1306.476562 622.574219 1250 639.558594 L 1250 619.742188 C 1303.566406 602.316406 1349.414062 567.78125 1381.085938 522.582031 Z M 1381.085938 522.582031 " />
+            <path d="M 1358.164062 443.546875 C 1359.914062 454.292969 1362.164062 464.875 1364.886719 475.261719 C 1340.609375 522.351562 1299.738281 559.488281 1250 578.933594 L 1250 558.476562 C 1300.023438 536.71875 1339.402344 495.085938 1358.164062 443.546875 Z M 1358.164062 443.546875 " />
+          </g>
+        </svg>
+        <span className="brand-word">LEKKER ADEMEN</span>
+      </div>
 
       {!isActive && (
         <div className="tabs">
@@ -1061,7 +1058,9 @@ function App() {
                   <div className="phase-label phase-enter" key="meditate">
                     Meditate
                   </div>
-                  <div className="countdown">{medTimer.countdown}</div>
+                  <CountdownRing progress={medTimer.progress} size="active">
+                    <div className="countdown">{medTimer.countdown}</div>
+                  </CountdownRing>
                   <div className="info">{medTimer.info}</div>
                 </div>
               )}
