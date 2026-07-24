@@ -20,6 +20,16 @@ type Tab =
   | 'breath-journey'
   | 'meditation';
 
+// Left-to-right order of the segmented tab control, used to slide the
+// active indicator to the right slot.
+const TAB_ORDER: readonly Tab[] = [
+  'flow-breathing',
+  'progressive-box',
+  'co2-table',
+  'breath-journey',
+  'meditation',
+] as const;
+
 type DisplayMode = 'numbers' | 'bubble';
 
 type SoundLevel = 'off' | 'low' | 'medium' | 'high';
@@ -576,6 +586,12 @@ function App() {
 
       {!isActive && (
         <div className="tabs">
+          <div
+            className="tabs-indicator"
+            style={{
+              transform: `translateX(${TAB_ORDER.indexOf(activeTab) * 100}%)`,
+            }}
+          />
           <button
             className={`tab ${activeTab === 'flow-breathing' ? 'tab-active' : ''}`}
             onClick={() => handleTabChange('flow-breathing')}
@@ -609,12 +625,6 @@ function App() {
         </div>
       )}
 
-      <h1 className="title">{TITLES[activeTab]}</h1>
-
-      {(!isActive || activeTab === 'breath-journey') && (
-        <p className="description">{DESCRIPTIONS[activeTab]}</p>
-      )}
-
       {!isActive && celebrate !== null && (
         <p className="streak-celebrate">
           {celebrate === 1
@@ -624,7 +634,28 @@ function App() {
       )}
 
       {!isActive && celebrate === null && streakCount > 0 && (
-        <span className="streak-chip">🔥 {streakCount}-day streak</span>
+        <div className="streak-row">
+          <span className="streak-label">{streakCount}-day streak</span>
+          <div className="streak-dots">
+            {Array.from({ length: 7 }, (_, i) => {
+              const filledCount = Math.min(streakCount, 7);
+              return (
+                <span
+                  key={i}
+                  className={`streak-dot ${i < filledCount ? 'streak-dot-filled' : ''} ${
+                    i === filledCount - 1 ? 'streak-dot-current' : ''
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <h1 className="title">{TITLES[activeTab]}</h1>
+
+      {(!isActive || activeTab === 'breath-journey') && (
+        <p className="description">{DESCRIPTIONS[activeTab]}</p>
       )}
 
       {activeTab === 'breath-journey' ? (
@@ -934,9 +965,19 @@ function App() {
               <div className="phase-label phase-enter" key="prep">
                 Get ready
               </div>
-              <div className="countdown countdown-tick" key={prepCountdown}>
-                {prepCountdown}
-              </div>
+              <CountdownRing
+                progress={
+                  prepSeconds > 0 ? 1 - (prepCountdown ?? 0) / prepSeconds : 0
+                }
+                size="prep"
+              >
+                <div
+                  className="countdown countdown-prep countdown-tick"
+                  key={prepCountdown}
+                >
+                  {prepCountdown}
+                </div>
+              </CountdownRing>
               <div className="info">Find a comfortable position</div>
             </div>
           ) : (
@@ -946,19 +987,21 @@ function App() {
                   <div className="phase-label phase-enter" key={boxTimer.phase}>
                     {boxTimer.phaseLabel}
                   </div>
-                  {displayMode === 'bubble' ? (
-                    <BreathingBubble
-                      phase={boxTimer.phase}
-                      duration={boxTimer.currentDuration}
-                    />
-                  ) : (
-                    <div
-                      className="countdown countdown-tick"
-                      key={boxTimer.secondsLeft}
-                    >
-                      {boxTimer.secondsLeft}
-                    </div>
-                  )}
+                  <CountdownRing progress={boxTimer.progress} size="active">
+                    {displayMode === 'bubble' ? (
+                      <BreathingBubble
+                        phase={boxTimer.phase}
+                        duration={boxTimer.currentDuration}
+                      />
+                    ) : (
+                      <div
+                        className="countdown countdown-tick"
+                        key={boxTimer.secondsLeft}
+                      >
+                        {boxTimer.secondsLeft}
+                      </div>
+                    )}
+                  </CountdownRing>
                   <div className="info">
                     {boxTimer.currentDuration}s &middot; round{' '}
                     {boxTimer.roundInSet}/{roundsPerIncrement}
@@ -974,21 +1017,21 @@ function App() {
                   >
                     {flowTimer.phaseLabel}
                   </div>
-                  {displayMode === 'bubble' ? (
-                    <BreathingBubble
-                      phase={flowTimer.phase}
-                      duration={flowTimer.currentDuration}
-                    />
-                  ) : (
-                    <div className="countdown-wrapper">
+                  <CountdownRing progress={flowTimer.progress} size="active">
+                    {displayMode === 'bubble' ? (
+                      <BreathingBubble
+                        phase={flowTimer.phase}
+                        duration={flowTimer.currentDuration}
+                      />
+                    ) : (
                       <div
                         className={`countdown countdown-tick ${flowTimer.displayTime.includes('.') ? 'countdown-half' : ''}`}
                         key={flowTimer.displayTime}
                       >
                         {flowTimer.displayTime}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </CountdownRing>
                   <div className="info">{flowTimer.remainingTime}</div>
                 </div>
               )}
@@ -1001,12 +1044,14 @@ function App() {
                   >
                     {co2Timer.phaseLabel}
                   </div>
-                  <div
-                    className="countdown countdown-tick"
-                    key={co2Timer.countdown}
-                  >
-                    {co2Timer.countdown}
-                  </div>
+                  <CountdownRing progress={co2Timer.progress} size="active">
+                    <div
+                      className={`countdown countdown-tick ${co2Timer.countdown.includes(':') ? 'countdown-compact' : ''}`}
+                      key={co2Timer.countdown}
+                    >
+                      {co2Timer.countdown}
+                    </div>
+                  </CountdownRing>
                   <div className="info">{co2Timer.roundInfo}</div>
                 </div>
               )}
@@ -1068,6 +1113,40 @@ function FlowSetting({
           +
         </button>
       </div>
+    </div>
+  );
+}
+
+function CountdownRing({
+  progress,
+  size,
+  children,
+}: {
+  /** Fraction (0..1) of the current phase elapsed. Arc sweeps in as it grows. */
+  progress: number;
+  size: 'active' | 'prep';
+  children: React.ReactNode;
+}) {
+  const r = 44;
+  const circumference = 2 * Math.PI * r;
+  const clamped = Math.min(1, Math.max(0, progress));
+  const offset = circumference * (1 - clamped);
+
+  return (
+    <div className={`ring ring-${size}`}>
+      <svg className="ring-svg" viewBox="0 0 100 100">
+        <circle className="ring-track" cx="50" cy="50" r={r} strokeWidth={6} />
+        <circle
+          className="ring-progress"
+          cx="50"
+          cy="50"
+          r={r}
+          strokeWidth={6}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <div className="ring-content">{children}</div>
     </div>
   );
 }

@@ -16,6 +16,8 @@ interface TimerState {
   phaseLabel: string;
   countdown: string;
   roundInfo: string;
+  /** Fraction (0..1) of the current phase that has elapsed, for the countdown ring. */
+  progress: number;
 }
 
 interface Internals {
@@ -32,6 +34,7 @@ const INITIAL_STATE: TimerState = {
   phaseLabel: '',
   countdown: '',
   roundInfo: '',
+  progress: 0,
 };
 
 function formatCountdown(ms: number): string {
@@ -100,6 +103,7 @@ export function useCO2Timer(
             phaseLabel: 'Hold breath',
             countdown: formatCountdown(round.holdMs),
             roundInfo: `Round ${s.roundIndex + 1} of ${s.rounds.length}`,
+            progress: 0,
           });
         } else {
           // Hold done → check if last round
@@ -122,6 +126,7 @@ export function useCO2Timer(
             phaseLabel: 'Breathe normally',
             countdown: formatCountdown(nextRound.restMs),
             roundInfo: `Round ${s.roundIndex + 1} of ${s.rounds.length}`,
+            progress: 0,
           });
         }
       } else {
@@ -129,6 +134,7 @@ export function useCO2Timer(
         setState((prev) => ({
           ...prev,
           countdown: formatCountdown(remaining),
+          progress: elapsed / phaseDuration,
         }));
       }
 
@@ -157,6 +163,7 @@ export function useCO2Timer(
       phaseLabel: 'Breathe normally',
       countdown: formatCountdown(rounds[0].restMs),
       roundInfo: `Round 1 of ${rounds.length}`,
+      progress: 0,
     });
 
     cancelLoop();

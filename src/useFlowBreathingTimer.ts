@@ -28,6 +28,8 @@ interface TimerState {
   displayTime: string;
   remainingTime: string;
   currentDuration: number; // seconds, duration of the current phase
+  /** Fraction (0..1) of the current phase that has elapsed, for the countdown ring. */
+  progress: number;
 }
 
 const INITIAL_STATE: TimerState = {
@@ -37,6 +39,7 @@ const INITIAL_STATE: TimerState = {
   displayTime: '',
   remainingTime: '',
   currentDuration: 0,
+  progress: 0,
 };
 
 // Show ".5" only during the initial half-second of a phase that starts with one;
@@ -158,6 +161,7 @@ export function useFlowBreathingTimer(
           displayTime: formatDisplay(nextPhase.duration, nextPhase.duration),
           remainingTime: formatRemaining(totalRemaining),
           currentDuration: nextPhase.duration / 1000,
+          progress: 0,
         });
       } else {
         // Mid-phase update
@@ -172,6 +176,7 @@ export function useFlowBreathingTimer(
           displayTime: formatDisplay(remainingInPhase, currentPhase.duration),
           remainingTime: formatRemaining(totalRemaining),
           currentDuration: currentPhase.duration / 1000,
+          progress: elapsed / currentPhase.duration,
         });
       }
 
@@ -202,6 +207,7 @@ export function useFlowBreathingTimer(
       displayTime: formatDisplay(firstPhase.duration, firstPhase.duration),
       remainingTime: formatRemaining(s.totalMinutes * 60 * 1000),
       currentDuration: firstPhase.duration / 1000,
+      progress: 0,
     });
 
     cancelLoop();

@@ -15,14 +15,16 @@
 }
 
 :root {
-  --bg: #1a2e28;
-  --bg-light: #2b4238;
-  --text: #fef9f3;
-  --text-muted: rgba(254, 249, 243, 0.6);
-  --accent: #7eb8a4;
-  --accent-glow: rgba(126, 184, 164, 0.3);
+  --bg: #f6f1e8;
+  --surface: #fefbf6;
+  --ink: #0a1a10;
+  --ink-muted: #4e594f;
+  --accent: #6faf86;
+  --accent-deep: #2b6241;
+  --accent-glow: rgba(111, 175, 134, 0.3);
+  --line: rgba(19, 36, 25, 0.12);
 
-  font-family: 'Mulish', system-ui, sans-serif;
+  font-family: 'Work Sans', system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

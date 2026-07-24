@@ -18,6 +18,8 @@ interface TimerState {
   secondsLeft: number;
   currentDuration: number;
   roundInSet: number;
+  /** Fraction (0..1) of the current phase that has elapsed, for the countdown ring. */
+  progress: number;
 }
 
 interface InternalState {
@@ -41,6 +43,7 @@ const INITIAL_STATE: TimerState = {
   secondsLeft: 3,
   currentDuration: 3,
   roundInSet: 1,
+  progress: 0,
 };
 
 export function useBreathingTimer(
@@ -103,6 +106,7 @@ export function useBreathingTimer(
       secondsLeft: s.secondsLeft,
       currentDuration: s.currentDuration,
       roundInSet: s.roundInSet,
+      progress: (s.currentDuration - s.secondsLeft) / s.currentDuration,
     });
   }, []);
 

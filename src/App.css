@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 48px;
+  gap: 40px;
   max-width: 480px;
   width: 100%;
 }
@@ -16,63 +16,69 @@ button {
 }
 
 button:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-deep);
   outline-offset: 2px;
 }
 
 .title {
+  font-family: 'Piazzolla', serif;
+  font-style: italic;
+  font-weight: 500;
   font-size: 1.5rem;
-  font-weight: 300;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  line-height: 1.15;
+  color: var(--ink);
   text-align: center;
 }
 
 /* Description */
 .description {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  font-size: 0.82rem;
+  color: var(--ink-muted);
   text-align: center;
   line-height: 1.6;
-  opacity: 0.6;
-  max-width: 320px;
+  max-width: 300px;
 }
 
-/* Tabs */
+/* Segmented sliding tab control */
 .tabs {
+  position: relative;
   display: flex;
   width: 100%;
-  border-bottom: 1px solid var(--bg-light);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.tabs-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(20% - 2px);
+  border-radius: 999px;
+  background: var(--accent);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tab {
+  position: relative;
+  z-index: 1;
   flex: 1;
-  padding: 12px 8px;
-  font-family: 'Mulish', system-ui, sans-serif;
-  font-size: 0.72rem;
+  padding: 9px 4px;
+  font-family: 'Work Sans', system-ui, sans-serif;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  opacity: 0.4;
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
   background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-@media (hover: hover) {
-  .tab:hover {
-    opacity: 0.7;
-  }
+  transition: color 0.2s ease;
 }
 
 .tab-active {
-  color: var(--accent);
-  opacity: 1;
-  border-bottom-color: var(--accent);
+  color: var(--ink);
 }
 
 /* Flow settings */
@@ -98,11 +104,11 @@ button:focus-visible {
   padding: 0 10px;
   font-size: 0.75rem;
   border-radius: 50px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .flow-setting .rounds-value {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   min-width: 4ch;
 }
 
@@ -113,8 +119,8 @@ button:focus-visible {
 /* CO2 schedule summary */
 .co2-schedule {
   font-size: 0.75rem;
-  color: var(--text-muted);
-  opacity: 0.6;
+  color: var(--ink-muted);
+  opacity: 0.85;
   text-align: center;
   line-height: 1.6;
 }
@@ -122,23 +128,23 @@ button:focus-visible {
 /* Disclaimer */
 .disclaimer {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   text-align: center;
   line-height: 1.5;
-  border: 1px solid var(--bg-light);
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
   padding: 10px 14px;
   max-width: 300px;
-  opacity: 0.7;
 }
 
 /* Install hint */
 .install-hint {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   text-align: center;
   line-height: 1.5;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 /* Settings */
@@ -150,9 +156,9 @@ button:focus-visible {
 }
 
 .settings label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
 .rounds-selector {
@@ -162,14 +168,14 @@ button:focus-visible {
 }
 
 .rounds-selector button {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: 1px solid var(--accent);
   background: transparent;
-  color: var(--accent);
-  font-size: 1.2rem;
-  font-family: 'Mulish', system-ui, sans-serif;
+  color: var(--accent-deep);
+  font-size: 1.1rem;
+  font-family: 'Work Sans', system-ui, sans-serif;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -184,10 +190,12 @@ button:focus-visible {
 }
 
 .rounds-value {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
+  color: var(--ink);
   min-width: 2ch;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Actions group (sound toggle + start) */
@@ -195,19 +203,19 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
 }
 
-/* Sound toggle */
+/* Sound / display / prep / music pill */
 .sound-toggle {
-  font-family: 'Mulish', system-ui, sans-serif;
-  font-size: 0.85rem;
-  font-weight: 400;
-  color: var(--text-muted);
+  font-family: 'Work Sans', system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--ink-muted);
   background: transparent;
-  border: 1px solid var(--bg-light);
-  border-radius: 50px;
-  padding: 8px 20px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -215,13 +223,13 @@ button:focus-visible {
 @media (hover: hover) {
   .sound-toggle:hover {
     border-color: var(--accent);
-    color: var(--text);
+    color: var(--accent-deep);
   }
 }
 
 .sound-toggle.sound-on {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-deep);
 }
 
 /* Flow preset chips */
@@ -234,14 +242,14 @@ button:focus-visible {
 }
 
 .preset-btn {
-  font-family: 'Mulish', system-ui, sans-serif;
-  font-size: 0.75rem;
+  font-family: 'Work Sans', system-ui, sans-serif;
+  font-size: 0.72rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   background: transparent;
-  border: 1px solid var(--bg-light);
-  border-radius: 50px;
-  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -249,7 +257,7 @@ button:focus-visible {
 @media (hover: hover) {
   .preset-btn:hover {
     border-color: var(--accent);
-    color: var(--accent);
+    color: var(--accent-deep);
   }
 }
 
@@ -257,7 +265,7 @@ button:focus-visible {
    the destructive-ish write action reads as secondary. */
 .preset-btn-save {
   border-style: dashed;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 @media (hover: hover) {
@@ -270,7 +278,7 @@ button:focus-visible {
 /* Selected pill in the meditation duration / interval rows. */
 .preset-btn-active {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-deep);
   background: var(--accent-glow);
 }
 
@@ -282,10 +290,102 @@ button:focus-visible {
   justify-content: center;
 }
 
-/* Breathing bubble */
+/* Daily practice streak — dot row on the idle screen, celebration pill
+   right after a qualifying session. */
+.streak-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.streak-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.streak-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.streak-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+}
+
+.streak-dot-filled {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.streak-dot-filled.streak-dot-current {
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.streak-celebrate {
+  align-self: stretch;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: var(--accent-glow);
+  color: var(--accent-deep);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Countdown ring — SVG progress ring wrapping the phase number or bubble.
+   Uses a normalized 0-100 viewBox so the wrapper's on-screen size (set via
+   the `size` prop, independent of this stylesheet) never affects the
+   stroke math. */
+.ring {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ring-track {
+  fill: none;
+  stroke: var(--line);
+}
+
+.ring-progress {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+.ring-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Breathing bubble — sits inside the countdown ring */
 .bubble-outer {
-  width: 260px;
-  height: 260px;
+  width: 168px;
+  height: 168px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +402,7 @@ button:focus-visible {
     transparent 75%
   );
   border: 2px solid var(--accent);
-  box-shadow: 0 0 40px var(--accent-glow);
+  box-shadow: 0 0 32px var(--accent-glow);
   transition-property: transform;
   transform-origin: center;
   will-change: transform;
@@ -313,40 +413,46 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
 }
 
 .phase-label {
-  font-size: 1.8rem;
-  font-weight: 300;
-  letter-spacing: 0.04em;
-  min-height: 2.2rem;
+  font-family: 'Piazzolla', serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.4rem;
+  min-height: 1.8rem;
+  color: var(--ink);
   transition: opacity 0.3s ease;
 }
 
-.countdown-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 6rem;
-}
-
 .countdown {
-  font-size: 6rem;
+  font-family: 'Work Sans', system-ui, sans-serif;
+  font-size: 4.4rem;
   font-weight: 700;
   line-height: 1;
-  color: var(--accent);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   transition: font-size 0.2s ease;
 }
 
 .countdown-half {
-  font-size: 3.5rem;
+  font-size: 2.6rem;
+}
+
+/* mm:ss strings (CO2 rest/hold once past a minute) need to fit the ring */
+.countdown-compact {
+  font-size: 2.3rem;
+}
+
+.countdown-prep {
+  font-size: 3.1rem;
+  color: var(--accent-deep);
 }
 
 .info {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 0.82rem;
+  color: var(--ink-muted);
   font-weight: 400;
 }
 
@@ -357,13 +463,13 @@ button:focus-visible {
 }
 
 .btn {
-  font-family: 'Mulish', system-ui, sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-family: 'Work Sans', system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 14px 40px;
-  border-radius: 50px;
+  padding: 15px 44px;
+  border-radius: 999px;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -371,18 +477,19 @@ button:focus-visible {
 
 .btn-start {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 10px 26px var(--accent-glow);
 }
 
 @media (hover: hover) {
   .btn-start:hover {
-    background: #92c9b5;
+    background: #7fbd97;
   }
 }
 
 .btn-stop {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-deep);
   border: 1px solid var(--accent);
 }
 
@@ -439,18 +546,19 @@ button:focus-visible {
   border-radius: 50%;
   border: none;
   background: var(--accent);
-  color: var(--bg);
+  color: var(--ink);
   font-size: 1.6rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8px 24px var(--accent-glow);
 }
 
 @media (hover: hover) {
   .journey-play-btn:hover {
-    background: #92c9b5;
+    background: #7fbd97;
   }
 }
 
@@ -474,8 +582,8 @@ button:focus-visible {
     to right,
     var(--accent) 0%,
     var(--accent) calc(var(--progress, 0) * 100%),
-    var(--bg-light) calc(var(--progress, 0) * 100%),
-    var(--bg-light) 100%
+    var(--line) calc(var(--progress, 0) * 100%),
+    var(--line) 100%
   );
 }
 
@@ -503,8 +611,7 @@ button:focus-visible {
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: var(--text-muted);
-  opacity: 0.7;
+  color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -517,11 +624,11 @@ button:focus-visible {
      stays tight while a Pixel 7 / iPhone Pro Max gets comfortable breathing
      room, all without ever allowing the page to scroll. */
   .app {
-    gap: clamp(16px, 3.5vh, 36px);
+    gap: clamp(14px, 3vh, 32px);
   }
 
   .title {
-    font-size: clamp(1rem, 2.4vh, 1.35rem);
+    font-size: clamp(1.1rem, 2.3vh, 1.4rem);
   }
 
   .description {
@@ -569,12 +676,12 @@ button:focus-visible {
   }
 
   .preset-btn {
-    font-size: clamp(0.7rem, 1.5vh, 0.82rem);
+    font-size: clamp(0.68rem, 1.4vh, 0.78rem);
     padding: clamp(4px, 0.8vh, 7px) clamp(10px, 2vh, 16px);
   }
 
   .sound-toggle {
-    font-size: clamp(0.72rem, 1.6vh, 0.85rem);
+    font-size: clamp(0.68rem, 1.5vh, 0.8rem);
     padding: clamp(5px, 1vh, 8px) clamp(12px, 2.2vh, 18px);
   }
 
@@ -584,32 +691,40 @@ button:focus-visible {
   }
 
   .actions {
-    gap: clamp(12px, 2.4vh, 22px);
+    gap: clamp(12px, 2.2vh, 20px);
   }
 
   .tab {
-    padding: 8px 12px;
+    padding: clamp(7px, 1.4vh, 9px) 4px;
   }
 
   .timer-display {
-    gap: 16px;
+    gap: clamp(12px, 2.2vh, 20px);
   }
 
-  .countdown-wrapper {
-    height: 5rem;
+  .phase-label {
+    font-size: clamp(1.1rem, 2.6vh, 1.4rem);
   }
 
   .countdown {
-    font-size: 5rem;
+    font-size: clamp(2.6rem, 8.5vh, 4.4rem);
   }
 
   .countdown-half {
-    font-size: 3rem;
+    font-size: clamp(1.7rem, 5vh, 2.6rem);
+  }
+
+  .countdown-compact {
+    font-size: clamp(1.5rem, 4.4vh, 2.3rem);
+  }
+
+  .countdown-prep {
+    font-size: clamp(2rem, 6vh, 3.1rem);
   }
 
   .bubble-outer {
-    width: 200px;
-    height: 200px;
+    width: clamp(120px, 24vh, 168px);
+    height: clamp(120px, 24vh, 168px);
   }
 
   .btn {
@@ -620,6 +735,32 @@ button:focus-visible {
      with room to install already saw it. */
   .install-hint {
     display: none;
+  }
+}
+
+/* Ring sizes — normalized viewBox, so only the wrapper's box needs to
+   scale. Grows with viewport height, capped at the design's reference
+   size for a 390×844 frame. */
+.ring-active {
+  width: clamp(168px, 46vh, 210px);
+  height: clamp(168px, 46vh, 210px);
+}
+
+.ring-prep {
+  width: clamp(122px, 33vh, 150px);
+  height: clamp(122px, 33vh, 150px);
+}
+
+/* Respect reduced-motion for the two new animated elements this redesign
+   introduces — the ring sweep and the breathing bubble scale. Everything
+   else keeps its (already brief) transition. */
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress {
+    transition: none;
+  }
+
+  .bubble {
+    transition: none !important;
   }
 }
 
@@ -645,7 +786,7 @@ button:focus-visible {
 }
 
 .splash-word {
-  font-family: 'Neulis Alt', 'Mulish', system-ui, sans-serif;
+  font-family: 'Neulis Alt', 'Work Sans', system-ui, sans-serif;
   font-weight: 300;
   font-size: 1.9rem;
   letter-spacing: 0.3em;
@@ -662,27 +803,4 @@ button:focus-visible {
   100% {
     opacity: 0;
   }
-}
-
-/* Daily practice streak — persistent chip on the idle screen and a brief
-   celebratory line shown right after a qualifying session. */
-.streak-chip {
-  align-self: center;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--bg-light);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.streak-celebrate {
-  align-self: center;
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: var(--accent-glow);
-  color: var(--accent);
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-align: center;
 }
