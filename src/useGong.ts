@@ -6,30 +6,14 @@ const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-export type SoundKey =
-  | 'gong-start'
-  | 'gong-mid'
-  | 'gong-finish'
-  | 'breathe-in'
-  | 'hold'
-  | 'breathe-out'
-  | 'ending';
+export type SoundKey = 'breathe-in' | 'hold' | 'breathe-out' | 'ending';
 
-// Meditation rings three distinct gongs: opening strike, a mid interval bell
-// and a long closing gong. Measured fundamentals / lengths:
-//   gong_start.wav   110 Hz   1.7 s   opening
-//   gong_end.wav      98 Hz   1.9 s   interval (same pack as the opener, a
-//                                     tone lower — reads as a soft midpoint
-//                                     marker despite the "end" filename)
-//   gong_finish.mp3  190 Hz   6.1 s   closing, long decay
-// All three sit within ~2 dB of each other, so no per-key gain is needed —
-// which matters because the iOS HTMLAudioElement path can only attenuate
-// (volume ≤ 1), never boost. /gong.mp3 is 18 dB quieter than the rest and is
-// unusable here for exactly that reason.
+// Meditation's three bells reuse these same recordings (see playStart /
+// playMid / playFinish below) rather than getting keys of their own — the
+// gong_*.wav / gong_finish.mp3 samples were rejected as harsh, and giving
+// meditation its own keys would mean a second set of HTMLAudioElements
+// loading identical 512 kB files on the iOS path.
 const SRCS: Record<SoundKey, string> = {
-  'gong-start': '/gong_start.wav',
-  'gong-mid': '/gong_end.wav',
-  'gong-finish': '/gong_finish.mp3',
   'breathe-in': '/breathing-in.mp3',
   hold: '/hold.mp3',
   'breathe-out': '/breathing-out.mp3',
@@ -41,7 +25,7 @@ const SRCS: Record<SoundKey, string> = {
 // than the source is pointless, so any fade duration is clamped to this.
 const SOURCE_MAX_SECONDS = 16;
 
-// Base playback level for all phase cue and free sounds (0–1). Mutable —
+// Base playback level for every cue (0–1). Mutable —
 // App.tsx drives this via setVolume based on the user's soundLevel pill.
 // The fade envelope ramps from this level down to silence.
 let cueVolume = 0.65;
@@ -136,14 +120,6 @@ function htmlStartUnlocks() {
   }
 }
 
-function htmlPlayFree(key: SoundKey) {
-  const audio = htmlAudio?.[key];
-  if (!audio) return;
-  audio.currentTime = 0;
-  audio.volume = cueVolume;
-  audio.play().catch(() => {});
-}
-
 function htmlPlayStoppable(key: SoundKey, fadeSeconds?: number) {
   htmlCancelFade();
   if (htmlCurrentStoppable) {
@@ -199,9 +175,6 @@ function prefetch(key: SoundKey, src: string) {
 }
 
 if (!isIOS) {
-  prefetch('gong-start', SRCS['gong-start']);
-  prefetch('gong-mid', SRCS['gong-mid']);
-  prefetch('gong-finish', SRCS['gong-finish']);
   prefetch('breathe-in', SRCS['breathe-in']);
   prefetch('hold', SRCS['hold']);
   prefetch('breathe-out', SRCS['breathe-out']);
@@ -262,18 +235,6 @@ function stopCurrent() {
     }
     currentGain = null;
   }
-}
-
-function playFree(key: SoundKey) {
-  if (!ctx) return;
-  const buffer = buffers.get(key);
-  if (!buffer) return;
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(cueVolume, ctx.currentTime);
-  source.connect(gain).connect(ctx.destination);
-  source.start(0);
 }
 
 function playStoppable(key: SoundKey, fadeSeconds?: number) {
@@ -347,22 +308,25 @@ export function useGong() {
     }
   }, []);
 
+  // Meditation bells — the opening, interval and closing cues. They ring the
+  // breathing recordings (in / hold / out), unfaded so the full 16 s decay
+  // plays out, and on the stoppable slot so Stop silences a ringing bell.
   const playStart = useCallback(() => {
     if (!enabledRef.current) return;
-    if (isIOS) htmlPlayFree('gong-start');
-    else playFree('gong-start');
+    if (isIOS) htmlPlayStoppable('breathe-in');
+    else playStoppable('breathe-in');
   }, []);
 
   const playMid = useCallback(() => {
     if (!enabledRef.current) return;
-    if (isIOS) htmlPlayFree('gong-mid');
-    else playFree('gong-mid');
+    if (isIOS) htmlPlayStoppable('hold');
+    else playStoppable('hold');
   }, []);
 
   const playFinish = useCallback(() => {
     if (!enabledRef.current) return;
-    if (isIOS) htmlPlayFree('gong-finish');
-    else playFree('gong-finish');
+    if (isIOS) htmlPlayStoppable('breathe-out');
+    else playStoppable('breathe-out');
   }, []);
 
   const playBreatheIn = useCallback((fadeSeconds?: number) => {

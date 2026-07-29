@@ -461,7 +461,7 @@ function App() {
       activeTab === 'progressive-box' || activeTab === 'flow-breathing'
         ? 'breathe-in'
         : activeTab === 'meditation'
-          ? 'gong-start'
+          ? 'breathe-in' // meditation's opening bell is the in-breath cue
           : 'ending';
     await gong.warmUp(firstKey);
     wakeLock.request();
