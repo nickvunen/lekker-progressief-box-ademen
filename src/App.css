@@ -1,10 +1,40 @@
+/* The column spans the full viewport height so the Start button is laid out
+   inside it instead of growing past #root's `overflow: hidden` and falling
+   off the bottom (Flow has the tallest settings block — it overflowed by
+   ~30-45 px on a 667/640 px-tall screen). Everything here keeps its natural
+   size; only .settings is allowed to give up space, so the actions row is
+   always on screen. */
 .app {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
+  /* Vertical rhythm follows viewport height everywhere, not just on phones —
+     a short desktop window used to overflow just like a small phone. */
+  gap: clamp(16px, 3vh, 40px);
   max-width: 480px;
   width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.app > * {
+  flex: none;
+}
+
+/* Last-resort valve: on a screen too short even for the compact rhythm the
+   settings block shrinks and scrolls internally (scrollbar hidden) rather
+   than pushing Start out of view. */
+.app > .settings {
+  flex: 0 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.app > .settings::-webkit-scrollbar {
+  display: none;
 }
 
 /* Kill the iOS blue tap overlay + Android/Chrome blue focus halo so every
@@ -106,12 +136,17 @@ button:focus-visible {
   color: var(--ink);
 }
 
-/* Flow settings */
+/* Flow settings — label on the left, stepper on the right. Was a stacked
+   column outside the phone breakpoint, which cost ~24 px per row and pushed
+   the Start button off the bottom of shorter desktop windows. */
 .flow-setting {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 320px;
+  gap: 10px;
 }
 
 .flow-setting .rounds-selector {
@@ -641,15 +676,18 @@ button:focus-visible {
 }
 
 /* Compact layout for phones (portrait width ≤ 600 px catches all modern
-   Android + iPhone devices) and for any short window (≤ 750 px height,
-   covers desktop resized small and iPhone Safari with chrome visible).
-   The two conditions are OR-combined via the comma. */
-@media (max-width: 600px), (max-height: 750px) {
+   Android + iPhone devices) and for any short window (≤ 900 px height,
+   covers laptop browser windows, desktop resized small, and iPhone Safari
+   with chrome visible). The two conditions are OR-combined via the comma.
+   The height cutoff is 900 rather than 750 because a 1440×800 laptop window
+   is exactly tall enough to be excluded and too short for the full-size
+   rhythm — the Flow settings then pushed Start off the bottom. */
+@media (max-width: 600px), (max-height: 900px) {
   /* Fluid vertical rhythm — gaps scale with viewport height so an iPhone SE
      stays tight while a Pixel 7 / iPhone Pro Max gets comfortable breathing
      room, all without ever allowing the page to scroll. */
   .app {
-    gap: clamp(14px, 3vh, 32px);
+    gap: clamp(10px, 2.2vh, 28px);
   }
 
   .title {
@@ -658,23 +696,17 @@ button:focus-visible {
 
   .description {
     font-size: clamp(0.72rem, 1.7vh, 0.9rem);
-    line-height: 1.4;
+    line-height: 1.35;
     max-width: 300px;
   }
 
   .settings {
-    gap: clamp(8px, 1.6vh, 16px);
+    gap: clamp(6px, 1.3vh, 14px);
   }
 
-  /* Flow settings rendered horizontally — label on the left, stepper on
-     the right. Width grows gently on bigger phones. */
+  /* Width grows gently on bigger phones. */
   .flow-setting {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
     max-width: clamp(260px, 85%, 320px);
-    gap: 10px;
   }
 
   .flow-setting label {
@@ -686,8 +718,8 @@ button:focus-visible {
   }
 
   .flow-setting .rounds-selector button {
-    width: clamp(28px, 4.2vh, 36px);
-    height: clamp(28px, 4.2vh, 36px);
+    width: clamp(26px, 4.2vh, 36px);
+    height: clamp(26px, 4.2vh, 36px);
     font-size: clamp(0.85rem, 1.9vh, 1rem);
   }
 
@@ -707,7 +739,7 @@ button:focus-visible {
 
   .sound-toggle {
     font-size: clamp(0.68rem, 1.5vh, 0.8rem);
-    padding: clamp(5px, 1vh, 8px) clamp(12px, 2.2vh, 18px);
+    padding: clamp(4px, 1vh, 8px) clamp(12px, 2.2vh, 18px);
   }
 
   .toggle-row {
@@ -716,7 +748,11 @@ button:focus-visible {
   }
 
   .actions {
-    gap: clamp(12px, 2.2vh, 20px);
+    gap: clamp(10px, 1.8vh, 18px);
+  }
+
+  .streak-row {
+    padding: clamp(6px, 1.2vh, 10px) 14px;
   }
 
   .tab {
