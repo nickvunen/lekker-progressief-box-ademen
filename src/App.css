@@ -169,7 +169,8 @@ button:focus-visible {
 
 .flow-setting .rounds-value {
   font-size: 1.05rem;
-  min-width: 4ch;
+  /* Fits the widest value the 0.5-steppers produce, e.g. "10.5min". */
+  min-width: 7ch;
 }
 
 .flow-setting label {
@@ -249,11 +250,13 @@ button:focus-visible {
   }
 }
 
+/* Wide enough for the longest value the steppers reach ("10", "100s",
+   "10min") so the +/− buttons never shift as the number grows. */
 .rounds-value {
   font-size: 1.4rem;
   font-weight: 600;
   color: var(--ink);
-  min-width: 2ch;
+  min-width: 3ch;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -266,7 +269,10 @@ button:focus-visible {
   gap: 18px;
 }
 
-/* Sound / display / prep / music pill */
+/* Sound / display / prep / music pill. These cycle through labels of
+   different lengths ("Prep off" → "Prep 10s", "Sound low" → "Sound high"),
+   so the box is sized for the longest label and the text centred inside it
+   — otherwise every tap resized the pill and re-flowed the whole row. */
 .sound-toggle {
   font-family: 'Work Sans', system-ui, sans-serif;
   font-size: 0.72rem;
@@ -276,6 +282,12 @@ button:focus-visible {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 7px 14px;
+  /* box-sizing is border-box, so the floor has to cover the longest label
+     ("Sound high") *plus* the horizontal padding — both in font-relative
+     units so it holds as the pill scales with viewport height. */
+  min-width: calc(11ch + 3em);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -310,6 +322,8 @@ button:focus-visible {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 7px 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -326,6 +340,8 @@ button:focus-visible {
 .preset-btn-save {
   border-style: dashed;
   opacity: 0.8;
+  /* "Save custom" and "Update custom" swap in place — size for the longer. */
+  min-width: calc(13ch + 3em);
 }
 
 @media (hover: hover) {
@@ -725,7 +741,7 @@ button:focus-visible {
 
   .flow-setting .rounds-value {
     font-size: clamp(0.95rem, 2vh, 1.15rem);
-    min-width: 3.5ch;
+    min-width: 7ch;
   }
 
   .preset-row {

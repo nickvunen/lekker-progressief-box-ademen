@@ -49,10 +49,10 @@ const SOUND_CYCLE: readonly SoundLevel[] = [
 ] as const;
 
 const SOUND_LABELS: Record<SoundLevel, string> = {
-  off: '🔕 Sound off',
-  low: '🔔 Sound low',
-  medium: '🔔 Sound med',
-  high: '🔔 Sound high',
+  off: 'Sound off',
+  low: 'Sound low',
+  medium: 'Sound med',
+  high: 'Sound high',
 };
 
 type FlowPreset = {
@@ -625,8 +625,8 @@ function App() {
       {!isActive && celebrate !== null && (
         <p className="streak-celebrate">
           {celebrate === 1
-            ? 'First session done — good job! 🔥'
-            : `${celebrate} days in a row — good job! 🎉`}
+            ? 'First session done — good job'
+            : `${celebrate} days in a row — good job`}
         </p>
       )}
 
@@ -685,7 +685,9 @@ function App() {
             onClick={handleJourneyToggle}
             aria-label={journeyPlaying ? 'Pause journey' : 'Play journey'}
           >
-            {journeyPlaying ? '⏸' : '▶'}
+            {/* U+FE0E forces text (monochrome) presentation — without it iOS
+                renders these as colour emoji. */}
+            {journeyPlaying ? '⏸︎' : '▶︎'}
           </button>
           <div className="journey-progress-container">
             <input
@@ -771,7 +773,7 @@ function App() {
                   onClick={saveCustomPreset}
                   aria-label="Save current values as custom preset"
                 >
-                  {customPreset ? '✎ Update custom' : '+ Save as custom'}
+                  {customPreset ? 'Update custom' : 'Save custom'}
                 </button>
               </div>
               <FlowSetting
@@ -851,7 +853,7 @@ function App() {
                 &rarr; 1:15 &rarr; 1:00 &middot; 7 rounds
               </p>
               <div className="disclaimer">
-                ⚠️ Never practice breath-holds alone or in/near water. Hypoxic
+                Never practice breath-holds alone or in/near water. Hypoxic
                 blackout can occur without warning.
               </div>
             </div>
@@ -907,7 +909,7 @@ function App() {
                       : 'Switch to bubble'
                   }
                 >
-                  {displayMode === 'bubble' ? '🫧 Bubble' : '🔢 Numbers'}
+                  {displayMode === 'bubble' ? 'Bubble' : 'Numbers'}
                 </button>
               )}
 
@@ -920,7 +922,7 @@ function App() {
                     : 'Pre-start countdown off'
                 }
               >
-                {prepSeconds > 0 ? `⏱ ${prepSeconds}s prep` : '⏱ Prep off'}
+                {prepSeconds > 0 ? `Prep ${prepSeconds}s` : 'Prep off'}
               </button>
 
               <button
@@ -932,7 +934,7 @@ function App() {
                     : 'Enable background music'
                 }
               >
-                {musicEnabled ? '🎵 Music on' : '🎵 Music off'}
+                {musicEnabled ? 'Music on' : 'Music off'}
               </button>
             </div>
 

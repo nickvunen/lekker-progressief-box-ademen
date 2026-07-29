@@ -13,10 +13,10 @@ A minimal breathing-exercise PWA — four modes, tap toggles, and nothing in the
 
 Each toggle sits as a pill above the Start button and persists in `localStorage`.
 
-- **🔔 Sound** — phase cue sounds (on / off).
-- **🔢 Numbers / 🫧 Bubble** — number countdown or an animated breathing bubble that grows on the in-breath and shrinks on the out-breath (Box and Flow).
-- **⏱ Prep** — cycles through `10 s → 20 s → 30 s → off`. Runs a "Get ready" countdown before the exercise starts.
-- **🎵 Music** — looping background bed track at low volume throughout the session.
+- **Sound** — phase cue sounds, cycling `off → low → med → high`.
+- **Numbers / Bubble** — number countdown or an animated breathing bubble that grows on the in-breath and shrinks on the out-breath (Box and Flow).
+- **Prep** — cycles through `10 s → 20 s → 30 s → off`. Runs a "Get ready" countdown before the exercise starts.
+- **Music** — looping background bed track at low volume throughout the session.
 
 Phase cue sounds fade to silence over the current phase duration, so the bell rings for the length of the count instead of getting chopped.
 
