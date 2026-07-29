@@ -1,7 +1,7 @@
 const CACHE_NAME = 'box-breathing-v4';
 
-// /gong.mp3 dropped: no mode plays it any more. The remaining cues are picked
-// up by the runtime cache on first use.
+// No audio is precached — the cues are picked up by the runtime cache on
+// first use.
 const PRECACHE_URLS = [
   '/',
   '/favicon.svg',

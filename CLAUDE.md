@@ -57,7 +57,7 @@ iOS WebKit (all iOS browsers, plus touch MacBooks per the detection) takes an `H
 
 Audio lives in `public/` and is loaded by absolute URL (`/ending.mp3`, `/breathing-in.mp3`, …) — never `import` it from `src/`. `SRCS` in `useGong.ts` maps `SoundKey` to file; there are only four keys, all breathing cues.
 
-Meditation's opening / interval / closing bells (`playStart` / `playMid` / `playFinish`) reuse those same recordings — `/breathing-in.mp3`, `/hold.mp3`, `/breathing-out.mp3` — played unfaded so the full 16 s decay rings out. They deliberately do **not** get keys of their own: that would mean a second set of `HTMLAudioElement`s loading identical 512 kB files on the iOS path. The `gong*.wav` / `gong_finish.mp3` / `gong.mp3` files in `public/` are leftovers from an earlier attempt, rejected as harsh, and are no longer referenced by any mode.
+Meditation's opening / interval / closing bells (`playStart` / `playMid` / `playFinish`) reuse those same recordings — `/breathing-in.mp3`, `/hold.mp3`, `/breathing-out.mp3` — played unfaded so the full 16 s decay rings out. They deliberately do **not** get keys of their own: that would mean a second set of `HTMLAudioElement`s loading identical 512 kB files on the iOS path. The separate gong recordings that used to live in `public/` were rejected as harsh and have been deleted — don't reintroduce them without asking.
 
 `public/background-music.mp3` and `public/breath-journey.mp3` are standalone `<audio>` elements in `App.tsx`, **not** part of the `useGong` unlock list. Music is iOS-unlocked by calling `play()` synchronously at the top of `handleStart`, before any `await`. Any new standalone audio element must follow the same pattern.
 

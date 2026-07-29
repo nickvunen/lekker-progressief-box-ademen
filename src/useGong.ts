@@ -10,7 +10,7 @@ export type SoundKey = 'breathe-in' | 'hold' | 'breathe-out' | 'ending';
 
 // Meditation's three bells reuse these same recordings (see playStart /
 // playMid / playFinish below) rather than getting keys of their own — the
-// gong_*.wav / gong_finish.mp3 samples were rejected as harsh, and giving
+// separate gong recordings sounded harsh and have been deleted, and giving
 // meditation its own keys would mean a second set of HTMLAudioElements
 // loading identical 512 kB files on the iOS path.
 const SRCS: Record<SoundKey, string> = {

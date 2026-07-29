@@ -68,8 +68,8 @@ audio element **synchronously within the user gesture**. Rules:
   whole session falls back to un-faded playback — this must remain a
   silent fallback, not an error.
 
-Audio files live in `public/` and are loaded by absolute URL (`/gong.mp3`,
-`/breathing-in.mp3`, etc.) — don't `import` them from `src/`.
+Audio files live in `public/` and are loaded by absolute URL
+(`/breathing-in.mp3`, `/ending.mp3`, etc.) — don't `import` them from `src/`.
 
 `public/background-music.mp3` is a separate looping bed track controlled by
 a standalone `<audio>` element in `App.tsx`, **not** part of the `useGong`
@@ -78,9 +78,9 @@ of `handleStart` (before any `await`). If you add another standalone audio
 element, follow the same pattern.
 
 `public/sw.js` has a hardcoded `PRECACHE_URLS` list that only caches
-`/`, `/gong.mp3`, `/favicon.svg`, `/icon-192.png`. Runtime cache picks up
-the rest. If you add a sound that must work offline on first load, add it
-to `PRECACHE_URLS` and bump `CACHE_NAME`.
+`/`, `/favicon.svg`, `/icon-192.png`, `/NeulisAlt-Light.ttf` — no audio.
+Runtime cache picks up the rest. If you add a sound that must work offline
+on first load, add it to `PRECACHE_URLS` and bump `CACHE_NAME`.
 
 ## TypeScript / lint quirks
 
