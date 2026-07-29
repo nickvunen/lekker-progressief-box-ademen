@@ -298,13 +298,13 @@ function App() {
   }, [gong, recordSession, fadeOutMusic]);
 
   const handleMeditationInterval = useCallback(() => {
-    gong.playIn();
+    gong.playMid(); // interval bell
   }, [gong]);
 
   const handleMeditationComplete = useCallback(() => {
     exerciseStartRef.current = null;
     recordSession();
-    gong.playFinish(); // closing bell
+    gong.playFinish(); // closing gong
     fadeOutMusic();
   }, [gong, recordSession, fadeOutMusic]);
 
@@ -461,7 +461,7 @@ function App() {
       activeTab === 'progressive-box' || activeTab === 'flow-breathing'
         ? 'breathe-in'
         : activeTab === 'meditation'
-          ? 'gong-in'
+          ? 'gong-start'
           : 'ending';
     await gong.warmUp(firstKey);
     wakeLock.request();
@@ -477,7 +477,7 @@ function App() {
         gong.playBreatheIn(breatheIn);
       } else if (activeTab === 'meditation') {
         medTimer.start();
-        gong.playIn(); // opening bell
+        gong.playStart(); // opening gong
       } else {
         co2Timer.start();
         gong.playEnding(); // CO₂ starts with the rest phase

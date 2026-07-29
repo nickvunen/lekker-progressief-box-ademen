@@ -7,21 +7,29 @@ const isIOS =
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 export type SoundKey =
-  | 'gong-in'
-  | 'gong-out'
+  | 'gong-start'
+  | 'gong-mid'
   | 'gong-finish'
   | 'breathe-in'
   | 'hold'
   | 'breathe-out'
   | 'ending';
 
-// Meditation's opening/interval/closing bells reuse the shared 'ending'
-// cue so every mode chimes with the same bell, rather than the old
-// gong_start/gong_finish recordings.
+// Meditation rings three distinct gongs: opening strike, a mid interval bell
+// and a long closing gong. Measured fundamentals / lengths:
+//   gong_start.wav   110 Hz   1.7 s   opening
+//   gong_end.wav      98 Hz   1.9 s   interval (same pack as the opener, a
+//                                     tone lower — reads as a soft midpoint
+//                                     marker despite the "end" filename)
+//   gong_finish.mp3  190 Hz   6.1 s   closing, long decay
+// All three sit within ~2 dB of each other, so no per-key gain is needed —
+// which matters because the iOS HTMLAudioElement path can only attenuate
+// (volume ≤ 1), never boost. /gong.mp3 is 18 dB quieter than the rest and is
+// unusable here for exactly that reason.
 const SRCS: Record<SoundKey, string> = {
-  'gong-in': '/ending.mp3',
-  'gong-out': '/gong_end.wav',
-  'gong-finish': '/ending.mp3',
+  'gong-start': '/gong_start.wav',
+  'gong-mid': '/gong_end.wav',
+  'gong-finish': '/gong_finish.mp3',
   'breathe-in': '/breathing-in.mp3',
   hold: '/hold.mp3',
   'breathe-out': '/breathing-out.mp3',
@@ -191,8 +199,8 @@ function prefetch(key: SoundKey, src: string) {
 }
 
 if (!isIOS) {
-  prefetch('gong-in', SRCS['gong-in']);
-  prefetch('gong-out', SRCS['gong-out']);
+  prefetch('gong-start', SRCS['gong-start']);
+  prefetch('gong-mid', SRCS['gong-mid']);
   prefetch('gong-finish', SRCS['gong-finish']);
   prefetch('breathe-in', SRCS['breathe-in']);
   prefetch('hold', SRCS['hold']);
@@ -339,16 +347,16 @@ export function useGong() {
     }
   }, []);
 
-  const playIn = useCallback(() => {
+  const playStart = useCallback(() => {
     if (!enabledRef.current) return;
-    if (isIOS) htmlPlayFree('gong-in');
-    else playFree('gong-in');
+    if (isIOS) htmlPlayFree('gong-start');
+    else playFree('gong-start');
   }, []);
 
-  const playOut = useCallback(() => {
+  const playMid = useCallback(() => {
     if (!enabledRef.current) return;
-    if (isIOS) htmlPlayFree('gong-out');
-    else playFree('gong-out');
+    if (isIOS) htmlPlayFree('gong-mid');
+    else playFree('gong-mid');
   }, []);
 
   const playFinish = useCallback(() => {
@@ -393,8 +401,8 @@ export function useGong() {
   }, []);
 
   return {
-    playIn,
-    playOut,
+    playStart,
+    playMid,
     playFinish,
     playBreatheIn,
     playHold,

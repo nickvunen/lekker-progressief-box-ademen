@@ -55,11 +55,11 @@ iOS WebKit (all iOS browsers, plus touch MacBooks per the detection) takes an `H
 - Stoppable plays (`playBreatheIn` / `playHold` / `playBreatheOut`) take an optional `fadeSeconds`: a **linear** supplementary gain ramp to silence layered on the source's baked-in exponential decay, so the bell ends with the count instead of getting chopped. **Do not switch this to an exponential ramp** — compounding kills the bell character on short phases. All cue mp3s are exactly 16.032 s, so fades clamp at `SOURCE_MAX_SECONDS`.
 - iOS volume feature-detects on the first fade attempt (`audio.volume = 0.5` write+readback). If iOS locks volume at 1.0 the whole session falls back to un-faded playback — keep that a silent fallback, not an error.
 
-Audio lives in `public/` and is loaded by absolute URL (`/ending.mp3`, `/breathing-in.mp3`, …) — never `import` it from `src/`. `SRCS` in `useGong.ts` maps `SoundKey` to file, and several keys deliberately point at the same file (meditation's opening/interval/closing bells all reuse `/ending.mp3`).
+Audio lives in `public/` and is loaded by absolute URL (`/ending.mp3`, `/breathing-in.mp3`, …) — never `import` it from `src/`. `SRCS` in `useGong.ts` maps `SoundKey` to file. Meditation uses three distinct gongs — `gong-start` (`/gong_start.wav`), `gong-mid` (`/gong_end.wav`, the interval bell) and `gong-finish` (`/gong_finish.mp3`). They were chosen partly for level: they sit within ~2 dB of each other, and the iOS `HTMLAudioElement` path can only attenuate (`volume ≤ 1`), never boost, so a quiet source cannot be brought up in code. That rules out `/gong.mp3`, which is ~18 dB quieter and no longer used by any mode.
 
 `public/background-music.mp3` and `public/breath-journey.mp3` are standalone `<audio>` elements in `App.tsx`, **not** part of the `useGong` unlock list. Music is iOS-unlocked by calling `play()` synchronously at the top of `handleStart`, before any `await`. Any new standalone audio element must follow the same pattern.
 
-`public/sw.js` has a hardcoded `PRECACHE_URLS` (`/`, `/gong.mp3`, `/favicon.svg`, `/icon-192.png`, `/NeulisAlt-Light.ttf`); runtime cache picks up the rest. To make a new sound work offline on first load, add it there **and** bump `CACHE_NAME`.
+`public/sw.js` has a hardcoded `PRECACHE_URLS` (`/`, `/favicon.svg`, `/icon-192.png`, `/NeulisAlt-Light.ttf`); runtime cache picks up the rest, including every sound. To make a new sound work offline on first load, add it there **and** bump `CACHE_NAME`.
 
 ## Styling
 
